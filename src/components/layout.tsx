@@ -35,7 +35,7 @@ export function Layout() {
             color="inherit"
             edge="start"
             onClick={() => setOpen(!open)}
-            sx={{ mr: 12, display: { sm: "none" } }}
+            sx={{ mr: 2 }}
           >
             <MenuIcon />
           </IconButton>
@@ -44,30 +44,17 @@ export function Layout() {
           </Typography>
         </Toolbar>
       </AppBar>
-
-      {/* <Drawer
-        variant="permanent"
-        sx={{
-          display: { xs: "none", sm: "block" },
-          "& .MuiDrawer-paper": { width: drawerWidth, boxSizing: "border-box" },
-        }}
-        open
-      >
-        {drawer}
-      </Drawer> */}
       <Drawer
         variant="temporary"
         open={open}
         onClose={() => setOpen(false)}
-        ModalProps={{ keepMounted: true }}
         sx={{
-          display: { xs: "block", sm: "none" },
+          display: { xs: "none", sm: "block" },
           "& .MuiDrawer-paper": { width: drawerWidth, boxSizing: "border-box" },
         }}
       >
         {drawer}
       </Drawer>
-
       <Box component="main" sx={{ flexGrow: 1, p: 3, mt: 8 }}>
         <BookList></BookList>
       </Box>
