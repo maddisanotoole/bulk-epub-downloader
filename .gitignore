@@ -2,3 +2,4 @@ books/
 node_modules/
 dist/
 database/
+api/__pycache__ 

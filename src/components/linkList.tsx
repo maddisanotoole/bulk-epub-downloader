@@ -1,31 +1,24 @@
 import { useEffect, useState } from "react";
-import { DatabaseHelper } from "../databaseHelper";
+import { useAuthors } from "../hooks/useApi";
 
 export const LinkList = () => {
-  console.log("Accessing LinkList");
-  const db = new DatabaseHelper();
-  const [loading, setLoading] = useState<boolean>(true);
-  const [authors, setAuthors] = useState<String[]>([]);
+  const { authors, loading, error } = useAuthors();
+  const [sortedAuthors, setSortedAuthors] = useState<string[]>([]);
+
   useEffect(() => {
-    setLoading(true);
-    const fetchAuthors = async () => {
-      const allAuthors = await db.getAllAuthors();
+    setSortedAuthors([...(authors ?? [])].sort());
+  }, [authors]);
 
-      console.log("Fetched authors:", allAuthors);
-      setAuthors(allAuthors.sort());
-      setLoading(false);
-    };
-    fetchAuthors();
-  }, []);
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>Error: {error}</p>;
+  if (!sortedAuthors.length) return <p>No authors</p>;
 
-  if (loading) {
-    return <p>Loading...</p>;
-  }
-
-  if (authors.length === 0) {
-    return <p>No authors</p>;
-  }
-  return authors.map((author) => {
-    return <div>${author}</div>;
-  });
+  return (
+    <div>
+      <h3>Authors</h3>
+      {sortedAuthors.map((author) => (
+        <div key={author}>{author}</div>
+      ))}
+    </div>
+  );
 };
