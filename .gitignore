@@ -1,0 +1,4 @@
+books/
+node_modules/
+dist/
+database/
