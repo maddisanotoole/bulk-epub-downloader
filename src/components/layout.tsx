@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import { AuthorList } from "./authorList";
+import { BookList } from "./bookList";
 
 const drawerWidth = 260;
 
@@ -34,7 +35,7 @@ export function Layout() {
             color="inherit"
             edge="start"
             onClick={() => setOpen(!open)}
-            sx={{ mr: 2, display: { sm: "none" } }}
+            sx={{ mr: 12, display: { sm: "none" } }}
           >
             <MenuIcon />
           </IconButton>
@@ -44,7 +45,7 @@ export function Layout() {
         </Toolbar>
       </AppBar>
 
-      <Drawer
+      {/* <Drawer
         variant="permanent"
         sx={{
           display: { xs: "none", sm: "block" },
@@ -53,7 +54,7 @@ export function Layout() {
         open
       >
         {drawer}
-      </Drawer>
+      </Drawer> */}
       <Drawer
         variant="temporary"
         open={open}
@@ -68,7 +69,7 @@ export function Layout() {
       </Drawer>
 
       <Box component="main" sx={{ flexGrow: 1, p: 3, mt: 8 }}>
-        <Typography variant="body1">Link List Here</Typography>
+        <BookList></BookList>
       </Box>
     </Box>
   );
