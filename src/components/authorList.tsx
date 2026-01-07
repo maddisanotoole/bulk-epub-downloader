@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useAuthors } from "../hooks/useApi";
+import { List, ListItemButton, ListItemText } from "@mui/material";
 
-export const LinkList = () => {
+export const AuthorList = () => {
   const { authors, loading, error } = useAuthors();
   const [sortedAuthors, setSortedAuthors] = useState<string[]>([]);
 
@@ -9,16 +10,18 @@ export const LinkList = () => {
     setSortedAuthors([...(authors ?? [])].sort());
   }, [authors]);
 
-  if (loading) return <p>Loading...</p>;
   if (error) return <p>Error: {error}</p>;
+  if (loading) return <p>Loading...</p>;
+
   if (!sortedAuthors.length) return <p>No authors</p>;
 
   return (
-    <div>
-      <h3>Authors</h3>
-      {sortedAuthors.map((author) => (
-        <div key={author}>{author}</div>
+    <List dense>
+      {sortedAuthors.map((a) => (
+        <ListItemButton key={a} onClick={() => console.log("clicked", a)}>
+          <ListItemText primary={a} />
+        </ListItemButton>
       ))}
-    </div>
+    </List>
   );
 };

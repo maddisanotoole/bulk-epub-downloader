@@ -1,13 +1,10 @@
-import { LinkList } from "./components/linkList";
+import { Layout } from "./components/layout";
 
 function App() {
-  console.log("Starting app");
   return (
     <div>
-      <h1>Book Downloader</h1>
-      <LinkList></LinkList>
+      <Layout></Layout>
     </div>
   );
 }
-
 export default App;
