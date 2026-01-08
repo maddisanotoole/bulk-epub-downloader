@@ -11,8 +11,8 @@ import {
 } from "@mui/material";
 import { Image as ImageIcon } from "@mui/icons-material";
 
-export const BookList = () => {
-  const { links, loading, error } = useLinks();
+export const BookList = ({ filterByAuthor }: { filterByAuthor?: string }) => {
+  const { links, loading, error } = useLinks(filterByAuthor);
   const [checked, setChecked] = useState<string[]>([]);
   const handleToggle = (value: string) => () => {
     const currentIndex = checked.indexOf(value);
@@ -52,7 +52,7 @@ export const BookList = () => {
               <ImageIcon></ImageIcon>
             </Avatar>
           </ListItemAvatar>
-          <ListItemText style={{ paddingLeft: "5px", width: "25%" }}>
+          <ListItemText style={{ paddingLeft: "25px", width: "25%" }}>
             {l.title}
           </ListItemText>
           <ListItemText style={{ paddingLeft: "5px", width: "10%" }}>

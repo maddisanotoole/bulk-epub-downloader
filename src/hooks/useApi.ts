@@ -3,7 +3,9 @@ import { Authors, Link } from "../types";
 
 const API_BASE = "http://localhost:8000";
 
-export function useAuthors() {
+let cachedAuthors: Authors | null = null;
+
+export function useAuthors(refresh: boolean = false) {
   const [authors, setAuthors] = useState<Authors>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -14,12 +16,17 @@ export function useAuthors() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`${API_BASE}/authors`, {
-          signal: controller.signal,
-        });
-        if (!res.ok) throw new Error(`Authors request failed: ${res.status}`);
-        const data = (await res.json()) as Authors;
-        setAuthors(data);
+        if (!refresh && cachedAuthors) {
+          setAuthors(cachedAuthors);
+        } else {
+          const res = await fetch(`${API_BASE}/authors`, {
+            signal: controller.signal,
+          });
+          if (!res.ok) throw new Error(`Authors request failed: ${res.status}`);
+          const data = (await res.json()) as Authors;
+          setAuthors(data);
+          cachedAuthors = data;
+        }
       } catch (err: any) {
         if (err.name === "AbortError") return;
         setError(err.message ?? "Failed to fetch authors");
@@ -34,7 +41,7 @@ export function useAuthors() {
   return { authors, loading, error } as const;
 }
 
-export function useLinks(author?: string) {
+export function useLinks(filterByAuthor?: string) {
   const [links, setLinks] = useState<Link[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +52,9 @@ export function useLinks(author?: string) {
       setLoading(true);
       setError(null);
       try {
-        const search = author ? `?author=${encodeURIComponent(author)}` : "";
+        const search = filterByAuthor
+          ? `?author=${encodeURIComponent(filterByAuthor)}`
+          : "";
         const res = await fetch(`${API_BASE}/links${search}`, {
           signal: controller.signal,
         });
@@ -61,7 +70,7 @@ export function useLinks(author?: string) {
     };
     run();
     return () => controller.abort();
-  }, [author]);
+  }, [filterByAuthor]);
 
   return { links, loading, error } as const;
 }

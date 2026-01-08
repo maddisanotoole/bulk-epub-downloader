@@ -1,7 +1,11 @@
 import { useAuthors } from "../hooks/useApi";
 import { List, ListItemButton, ListItemText } from "@mui/material";
 
-export const AuthorList = () => {
+export const AuthorList = ({
+  setFilterByAuthor,
+}: {
+  setFilterByAuthor: (slug: string) => void;
+}) => {
   const { authors, loading, error } = useAuthors();
 
   if (error) return <p>Error: {error}</p>;
@@ -12,7 +16,7 @@ export const AuthorList = () => {
   return (
     <List dense>
       {Object.entries(authors).map(([slug, name]) => (
-        <ListItemButton key={slug} onClick={() => console.log("clicked", slug)}>
+        <ListItemButton key={slug} onClick={() => setFilterByAuthor(slug)}>
           <ListItemText primary={name} />
         </ListItemButton>
       ))}

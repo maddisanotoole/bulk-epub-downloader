@@ -16,13 +16,15 @@ const drawerWidth = 260;
 
 export function Layout() {
   const [open, setOpen] = useState(false);
-
+  const [filterByAuthor, setFilterByAuthor] = useState<string | undefined>(
+    undefined
+  );
   const drawer = (
     <Box sx={{ width: drawerWidth, p: 2 }}>
       <Typography variant="h6" gutterBottom>
         Authors
       </Typography>
-      <AuthorList />
+      <AuthorList setFilterByAuthor={setFilterByAuthor} />
     </Box>
   );
 
@@ -56,7 +58,7 @@ export function Layout() {
         {drawer}
       </Drawer>
       <Box component="main" sx={{ flexGrow: 1, p: 3, mt: 8 }}>
-        <BookList></BookList>
+        <BookList filterByAuthor={filterByAuthor}></BookList>
       </Box>
     </Box>
   );
