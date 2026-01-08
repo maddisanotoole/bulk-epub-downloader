@@ -5,7 +5,8 @@
     "preview": "vite preview",
     "postinstall": "cd api && python -m pip install -r requirements.txt",
     "author": "cd api && python author_scraper.py",
-    "api": "cd api && uvicorn server:app --host 0.0.0.0 --port 8000"
+    "api": "cd api && uvicorn server:app --host 0.0.0.0 --port 8000",
+    "db": "sqlite3 database/links.db"
   },
   "name": "advent-of-code",
   "version": "1.0.0",

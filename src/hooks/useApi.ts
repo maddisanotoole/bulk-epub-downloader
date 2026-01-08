@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link } from "../types";
+import { Authors, Link } from "../types";
 
 const API_BASE = "http://localhost:8000";
 
 export function useAuthors() {
-  const [authors, setAuthors] = useState<string[]>([]);
+  const [authors, setAuthors] = useState<Authors>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,8 +18,8 @@ export function useAuthors() {
           signal: controller.signal,
         });
         if (!res.ok) throw new Error(`Authors request failed: ${res.status}`);
-        const data = (await res.json()) as string[];
-        setAuthors(data.sort());
+        const data = (await res.json()) as Authors;
+        setAuthors(data);
       } catch (err: any) {
         if (err.name === "AbortError") return;
         setError(err.message ?? "Failed to fetch authors");
