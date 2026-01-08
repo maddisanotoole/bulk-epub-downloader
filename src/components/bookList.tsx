@@ -45,12 +45,30 @@ export const BookList = () => {
             />
           </ListItemIcon>
           <ListItemAvatar>
-            <Avatar src={l.imageUrl}>
+            <Avatar
+              src={l.imageUrl}
+              style={{ borderRadius: "0%", height: "150px", width: "90px" }}
+            >
               <ImageIcon></ImageIcon>
             </Avatar>
           </ListItemAvatar>
-          <ListItemText>
-            {l.title} | {l.bookAuthor}
+          <ListItemText style={{ paddingLeft: "5px", width: "25%" }}>
+            {l.title}
+          </ListItemText>
+          <ListItemText style={{ paddingLeft: "5px", width: "10%" }}>
+            {l.bookAuthor}
+          </ListItemText>
+
+          <ListItemText style={{ paddingLeft: "5px", width: "10%" }}>
+            {l.date}
+          </ListItemText>
+
+          <ListItemText style={{ paddingLeft: "5px", width: "30%" }}>
+            {l.genre}
+          </ListItemText>
+
+          <ListItemText style={{ paddingLeft: "5px", width: "5%" }}>
+            {l.language}
           </ListItemText>
         </ListItemButton>
       ))}
