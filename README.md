@@ -26,7 +26,7 @@ sqlite3 database/links.db
 npm run db
 
 // THEN
-"select author, url from links"
+select author, url from links;
 ```
 
 
