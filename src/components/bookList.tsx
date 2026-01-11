@@ -11,9 +11,18 @@ import {
 } from "@mui/material";
 import { Image as ImageIcon } from "@mui/icons-material";
 
-export const BookList = ({ filterByAuthor }: { filterByAuthor?: string }) => {
+type BookListProps = {
+  filterByAuthor?: string;
+  checked: string[];
+  setChecked: (checked: string[]) => void;
+};
+
+export const BookList = ({
+  filterByAuthor,
+  checked,
+  setChecked,
+}: BookListProps) => {
   const { links, loading, error } = useLinks(filterByAuthor);
-  const [checked, setChecked] = useState<string[]>([]);
   const handleToggle = (value: string) => () => {
     const currentIndex = checked.indexOf(value);
     const newChecked = [...checked];
@@ -35,11 +44,11 @@ export const BookList = ({ filterByAuthor }: { filterByAuthor?: string }) => {
   return (
     <List dense>
       {links.map((l) => (
-        <ListItemButton key={l.url} onClick={handleToggle(l.url)}>
+        <ListItemButton key={l.url} onClick={handleToggle(l.bookUrl)}>
           <ListItemIcon>
             <Checkbox
               edge="start"
-              checked={checked.includes(l.url)}
+              checked={checked.includes(l.bookUrl)}
               tabIndex={-1}
               disableRipple
             />

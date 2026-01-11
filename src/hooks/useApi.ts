@@ -5,6 +5,44 @@ const API_BASE = "http://localhost:8000";
 
 let cachedAuthors: Authors | null = null;
 
+export function useDownload() {
+  const [downloading, setDownloading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState({ completed: 0, total: 0 });
+
+  const download = async (bookUrls: string[], destination?: string) => {
+    setDownloading(true);
+    setError(null);
+    setProgress({ completed: 0, total: bookUrls.length });
+
+    let completed = 0;
+    for (const bookUrl of bookUrls) {
+      try {
+        const body: any = { bookUrl };
+        if (destination) {
+          body.destination = destination;
+        }
+
+        const res = await fetch(`${API_BASE}/download`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+        completed++;
+        setProgress({ completed, total: bookUrls.length });
+      } catch (err: any) {
+        setError(err.message ?? `Failed to download ${bookUrl}`);
+        break;
+      }
+    }
+
+    setDownloading(false);
+  };
+
+  return { download, downloading, error, progress } as const;
+}
+
 export function useAuthors(refresh: boolean = false) {
   const [authors, setAuthors] = useState<Authors>({});
   const [loading, setLoading] = useState(true);

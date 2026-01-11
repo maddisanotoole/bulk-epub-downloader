@@ -4,6 +4,11 @@ from typing import List, Optional
 
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
+import cloudscraper
+from urllib.parse import urljoin
+
+headers = {'Accept-Encoding': 'identity', 'User-Agent': 'Defined'}
+scraper = cloudscraper.create_scraper()
 
 # uvicorn server:app --host 0.0.0.0 --port 8000
 
@@ -27,6 +32,119 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+def get_filename(url):
+    return url.split("/")[-1].split("?")[0]
+
+
+@app.post("/download")
+async def downloadFile(body: dict):
+    from os.path import join, expanduser
+    from os import makedirs
+    from bs4 import BeautifulSoup
+
+    book_url = body.get("bookUrl") 
+    custom_destination = body.get("destination")
+    
+    if not book_url:
+        return {"error": "bookUrl is required"}, 400
+    
+    try:
+        if custom_destination:
+            destination = custom_destination
+        else:
+            destination = join(expanduser("~"), "Downloads")
+        
+        makedirs(destination, exist_ok=True)
+        print(f"Fetching book page: {book_url}")
+        
+        response = scraper.get(book_url, headers=headers)
+        html = BeautifulSoup(response.text, "html.parser")
+        
+        forms = html.find_all('form', {'action': lambda x: x and 'Fetching_Resource.php' in x})
+        
+        if not forms:
+            print("No download forms found")
+            return {"error": "Could not find download form on page"}, 404
+        
+        # Prefer epub over pdf
+        selected_form = None
+        for form in forms:
+            filename_input = form.find('input', {'name': 'filename'})
+            if filename_input:
+                filename_value = filename_input.get('value', '')
+                if filename_value.endswith('.epub'):
+                    selected_form = form
+                    print(f"Found EPUB form: {filename_value}")
+                    break
+        
+        # If no epub, use pdf
+        if not selected_form:
+            for form in forms:
+                filename_input = form.find('input', {'name': 'filename'})
+                if filename_input:
+                    filename_value = filename_input.get('value', '')
+                    if filename_value.endswith('.pdf'):
+                        selected_form = form
+                        print(f"Found PDF form (no EPUB available): {filename_value}")
+                        break
+        
+        if not selected_form:
+            print("No valid download form found")
+            return {"error": "Could not find epub or pdf download form"}, 404
+        
+        form_action = selected_form.get('action')
+        form_id = selected_form.find('input', {'name': 'id'})
+        form_filename = selected_form.find('input', {'name': 'filename'})
+        
+        if not form_action or not form_id or not form_filename:
+            print("Form missing required fields")
+            return {"error": "Download form is incomplete"}, 404
+        
+        server_id = form_id.get('value')
+        filename = form_filename.get('value')
+        
+        print(f"Form action: {form_action}")
+        print(f"Server ID: {server_id}")
+        print(f"Filename: {filename}")
+        
+        form_data = {
+            'id': server_id,
+            'filename': filename
+        }
+        
+        print(f"Submitting form to download file...")
+        download_response = scraper.post(form_action, data=form_data, headers=headers, allow_redirects=True)
+        
+        redirect_html = BeautifulSoup(download_response.text, "html.parser")
+        meta_refresh = redirect_html.find('meta', attrs={'http-equiv': 'Refresh'})
+        
+        if not meta_refresh:
+            print("Could not find redirect URL")
+            return {"error": "Could not find download redirect"}, 404
+        
+        content_attr = meta_refresh.get('content', '')
+        if 'url=' in content_attr:
+            actual_download_url = content_attr.split('url=')[1]
+            print(f"Found actual download URL: {actual_download_url}")
+        else:
+            print("Could not parse redirect URL")
+            return {"error": "Could not parse download URL"}, 404
+        
+        print(f"Downloading file from: {actual_download_url}")
+        file_response = scraper.get(actual_download_url, headers=headers, allow_redirects=True)
+        
+        filepath = join(destination, filename)
+        with open(filepath, 'wb') as file:
+            file.write(file_response.content)
+        
+        print(f"Successfully downloaded to: {filepath}")
+        return {"success": True, "filename": filename, "destination": destination}
+        
+    except Exception as e:
+        print(f"Error downloading: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}, 500
 
 @app.get("/authors")
 async def get_all_authors():
