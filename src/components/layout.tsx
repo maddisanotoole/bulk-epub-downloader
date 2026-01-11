@@ -14,6 +14,8 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
+  Checkbox,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import DownloadIcon from "@mui/icons-material/Download";
@@ -33,12 +35,22 @@ export function Layout() {
   const [destination, setDestination] = useState<string | undefined>(undefined);
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
   const [tempDestination, setTempDestination] = useState("");
+  const [hideDownloaded, setHideDownloaded] = useState(true);
+  const [hideNonEnglish, setHideNonEnglish] = useState(true);
   const { download, downloading, progress } = useDownload();
 
   const handleDownload = async () => {
     if (checked.length > 0) {
       await download(checked, destination);
     }
+  };
+
+  const handleSelectAll = (allBookUrls: string[]) => {
+    setChecked(allBookUrls);
+  };
+
+  const handleUnselectAll = () => {
+    setChecked([]);
   };
 
   const handleSaveDestination = () => {
@@ -129,10 +141,34 @@ export function Layout() {
         {drawer}
       </Drawer>
       <Box component="main" sx={{ flexGrow: 1, p: 3, mt: 8 }}>
+        <Box sx={{ mb: 2, display: "flex", gap: 2, alignItems: "center" }}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={hideDownloaded}
+                onChange={(e) => setHideDownloaded(e.target.checked)}
+              />
+            }
+            label="Hide downloaded books"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={hideNonEnglish}
+                onChange={(e) => setHideNonEnglish(e.target.checked)}
+              />
+            }
+            label="English only"
+          />
+        </Box>
         <BookList
           filterByAuthor={filterByAuthor}
           checked={checked}
           setChecked={setChecked}
+          hideDownloaded={hideDownloaded}
+          hideNonEnglish={hideNonEnglish}
+          onSelectAll={handleSelectAll}
+          onUnselectAll={handleUnselectAll}
         />
       </Box>
 

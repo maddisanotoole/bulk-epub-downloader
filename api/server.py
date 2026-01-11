@@ -138,6 +138,15 @@ async def downloadFile(body: dict):
             file.write(file_response.content)
         
         print(f"Successfully downloaded to: {filepath}")
+        
+        with get_connection() as conn:
+            conn.execute(
+                "UPDATE links SET downloaded = 1 WHERE book_url = ?",
+                (book_url,)
+            )
+            conn.commit()
+        print(f"Marked {book_url} as downloaded in database")
+        
         return {"success": True, "filename": filename, "destination": destination}
         
     except Exception as e:
