@@ -22,7 +22,7 @@ import DownloadIcon from "@mui/icons-material/Download";
 import FolderIcon from "@mui/icons-material/Folder";
 import { AuthorList } from "./authorList";
 import { BookList } from "./bookList";
-import { useDownload } from "../hooks/useApi";
+import { useDownload, useDeleteAuthor, useAuthors } from "../hooks/useApi";
 
 const drawerWidth = 260;
 
@@ -37,7 +37,11 @@ export function Layout() {
   const [tempDestination, setTempDestination] = useState("");
   const [hideDownloaded, setHideDownloaded] = useState(true);
   const [hideNonEnglish, setHideNonEnglish] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [refreshAuthors, setRefreshAuthors] = useState(0);
   const { download, downloading, progress } = useDownload();
+  const { deleteAuthor, deleting } = useDeleteAuthor();
+  const { authors } = useAuthors(refreshAuthors > 0);
 
   const handleDownload = async () => {
     if (checked.length > 0) {
@@ -73,6 +77,26 @@ export function Layout() {
       }
     } catch (err) {
       console.log("Folder selection cancelled or failed", err);
+    }
+  };
+
+  const handleDeleteAuthorClick = () => {
+    if (filterByAuthor) {
+      setDeleteDialogOpen(true);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (filterByAuthor) {
+      try {
+        await deleteAuthor(filterByAuthor);
+        setDeleteDialogOpen(false);
+        setFilterByAuthor(undefined);
+        setChecked([]);
+        setRefreshAuthors((prev) => prev + 1);
+      } catch (err) {
+        console.error("Failed to delete author", err);
+      }
     }
   };
 
@@ -142,6 +166,30 @@ export function Layout() {
       </Drawer>
       <Box component="main" sx={{ flexGrow: 1, p: 3, mt: 8 }}>
         <Box sx={{ mb: 2, display: "flex", gap: 2, alignItems: "center" }}>
+          {filterByAuthor && (
+            <Box sx={{ mr: 2 }}>
+              <Typography variant="subtitle1" component="span" sx={{ mr: 2 }}>
+                Viewing: {authors[filterByAuthor] || filterByAuthor}
+              </Typography>
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                onClick={handleDeleteAuthorClick}
+                disabled={deleting}
+                sx={{ mr: 2 }}
+              >
+                {deleting ? "Deleting..." : "Delete Author"}
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setFilterByAuthor(undefined)}
+              >
+                Clear Filter
+              </Button>
+            </Box>
+          )}
           <FormControlLabel
             control={
               <Checkbox
@@ -206,6 +254,33 @@ export function Layout() {
           <Button onClick={() => setFolderDialogOpen(false)}>Cancel</Button>
           <Button onClick={handleSaveDestination} variant="contained">
             Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+      >
+        <DialogTitle>Delete Author</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete{" "}
+            {filterByAuthor && authors[filterByAuthor]
+              ? authors[filterByAuthor]
+              : filterByAuthor}{" "}
+            and all their books? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleConfirmDelete}
+            variant="contained"
+            color="error"
+            disabled={deleting}
+          >
+            {deleting ? "Deleting..." : "Delete"}
           </Button>
         </DialogActions>
       </Dialog>

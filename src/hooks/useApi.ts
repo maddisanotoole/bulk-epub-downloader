@@ -112,3 +112,32 @@ export function useLinks(filterByAuthor?: string) {
 
   return { links, loading, error } as const;
 }
+
+export function useDeleteAuthor() {
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const deleteAuthor = async (authorSlug: string) => {
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `${API_BASE}/authors/${encodeURIComponent(authorSlug)}`,
+        {
+          method: "DELETE",
+        }
+      );
+      if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
+      const data = await res.json();
+      cachedAuthors = null;
+      return data;
+    } catch (err: any) {
+      setError(err.message ?? "Failed to delete author");
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return { deleteAuthor, deleting, error } as const;
+}

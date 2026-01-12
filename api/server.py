@@ -201,4 +201,24 @@ async def get_links(author: Optional[str] = Query(default=None)):
         }
         for row in rows
     ]
+
+
+@app.delete("/authors/{author_slug}")
+async def delete_author(author_slug: str):
+    try:
+        with get_connection() as conn:
+            result = conn.execute(
+                "DELETE FROM links WHERE author = ?",
+                (author_slug,)
+            )
+            deleted_count = result.rowcount
+            conn.commit()
+        
+        print(f"Deleted author '{author_slug}' and {deleted_count} book(s)")
+        return {"success": True, "deleted_count": deleted_count}
+    except Exception as e:
+        print(f"Error deleting author: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}, 500
     
