@@ -6,6 +6,7 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import cloudscraper
 from urllib.parse import urljoin
+from scraper_utils import scrape_author, format_author_name
 
 headers = {'Accept-Encoding': 'identity', 'User-Agent': 'Defined'}
 scraper = cloudscraper.create_scraper()
@@ -218,6 +219,34 @@ async def delete_author(author_slug: str):
         return {"success": True, "deleted_count": deleted_count}
     except Exception as e:
         print(f"Error deleting author: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}, 500
+
+
+@app.post("/scrape-author")
+async def scrape_author_endpoint(body: dict):
+    author_input = body.get("author")
+    if not author_input:
+        return {"error": "author is required"}, 400
+    
+    author = format_author_name(author_input)
+    
+    try:
+        with get_connection() as conn:
+            result = scrape_author(author, conn)
+        
+        if result['success']:
+            return {
+                "success": True,
+                "books_added": result['books_added'],
+                "author": result['author']
+            }
+        else:
+            return {"error": result.get('error', 'Unknown error')}, 500
+            
+    except Exception as e:
+        print(f"Error scraping author: {e}")
         import traceback
         traceback.print_exc()
         return {"error": str(e)}, 500

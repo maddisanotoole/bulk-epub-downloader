@@ -141,3 +141,41 @@ export function useDeleteAuthor() {
 
   return { deleteAuthor, deleting, error } as const;
 }
+
+export function useAddAuthor() {
+  const [adding, setAdding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const addAuthor = async (authorName: string) => {
+    setAdding(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch(`${API_BASE}/scrape-author`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ author: authorName }),
+      });
+      if (!res.ok) throw new Error(`Add author failed: ${res.status}`);
+      const data = await res.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      cachedAuthors = null;
+      setSuccess(
+        `Successfully added ${data.books_added} book(s) for ${data.author}`
+      );
+      return data;
+    } catch (err: any) {
+      setError(err.message ?? "Failed to add author");
+      throw err;
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  return { addAuthor, adding, error, success } as const;
+}

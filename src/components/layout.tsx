@@ -20,8 +20,10 @@ import {
 import MenuIcon from "@mui/icons-material/Menu";
 import DownloadIcon from "@mui/icons-material/Download";
 import FolderIcon from "@mui/icons-material/Folder";
+import AddIcon from "@mui/icons-material/Add";
 import { AuthorList } from "./authorList";
 import { BookList } from "./bookList";
+import { AddAuthor } from "./addAuthor";
 import { useDownload, useDeleteAuthor, useAuthors } from "../hooks/useApi";
 
 const drawerWidth = 260;
@@ -39,6 +41,7 @@ export function Layout() {
   const [hideNonEnglish, setHideNonEnglish] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [refreshAuthors, setRefreshAuthors] = useState(0);
+  const [showAddAuthor, setShowAddAuthor] = useState(false);
   const { download, downloading, progress } = useDownload();
   const { deleteAuthor, deleting } = useDeleteAuthor();
   const { authors } = useAuthors(refreshAuthors > 0);
@@ -100,6 +103,10 @@ export function Layout() {
     }
   };
 
+  const handleAuthorAdded = () => {
+    setRefreshAuthors((prev) => prev + 1);
+  };
+
   const drawer = (
     <Box sx={{ width: drawerWidth, p: 2 }}>
       <Typography variant="h6" gutterBottom>
@@ -125,6 +132,14 @@ export function Layout() {
           <Typography variant="h6" noWrap sx={{ flexGrow: 1 }}>
             Book Downloader
           </Typography>
+          <Button
+            color="inherit"
+            startIcon={<AddIcon />}
+            onClick={() => setShowAddAuthor(!showAddAuthor)}
+            sx={{ mr: 2 }}
+          >
+            {showAddAuthor ? "View Books" : "Add Author"}
+          </Button>
           <Button
             color="inherit"
             startIcon={<FolderIcon />}
@@ -165,59 +180,69 @@ export function Layout() {
         {drawer}
       </Drawer>
       <Box component="main" sx={{ flexGrow: 1, p: 3, mt: 8 }}>
-        <Box sx={{ mb: 2, display: "flex", gap: 2, alignItems: "center" }}>
-          {filterByAuthor && (
-            <Box sx={{ mr: 2 }}>
-              <Typography variant="subtitle1" component="span" sx={{ mr: 2 }}>
-                Viewing: {authors[filterByAuthor] || filterByAuthor}
-              </Typography>
-              <Button
-                variant="outlined"
-                color="error"
-                size="small"
-                onClick={handleDeleteAuthorClick}
-                disabled={deleting}
-                sx={{ mr: 2 }}
-              >
-                {deleting ? "Deleting..." : "Delete Author"}
-              </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={() => setFilterByAuthor(undefined)}
-              >
-                Clear Filter
-              </Button>
+        {showAddAuthor ? (
+          <AddAuthor onAuthorAdded={handleAuthorAdded} />
+        ) : (
+          <>
+            <Box sx={{ mb: 2, display: "flex", gap: 2, alignItems: "center" }}>
+              {filterByAuthor && (
+                <Box sx={{ mr: 2 }}>
+                  <Typography
+                    variant="subtitle1"
+                    component="span"
+                    sx={{ mr: 2 }}
+                  >
+                    Viewing: {authors[filterByAuthor] || filterByAuthor}
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    size="small"
+                    onClick={handleDeleteAuthorClick}
+                    disabled={deleting}
+                    sx={{ mr: 2 }}
+                  >
+                    {deleting ? "Deleting..." : "Delete Author"}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => setFilterByAuthor(undefined)}
+                  >
+                    Clear Filter
+                  </Button>
+                </Box>
+              )}
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={hideDownloaded}
+                    onChange={(e) => setHideDownloaded(e.target.checked)}
+                  />
+                }
+                label="Hide downloaded books"
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={hideNonEnglish}
+                    onChange={(e) => setHideNonEnglish(e.target.checked)}
+                  />
+                }
+                label="English only"
+              />
             </Box>
-          )}
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={hideDownloaded}
-                onChange={(e) => setHideDownloaded(e.target.checked)}
-              />
-            }
-            label="Hide downloaded books"
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={hideNonEnglish}
-                onChange={(e) => setHideNonEnglish(e.target.checked)}
-              />
-            }
-            label="English only"
-          />
-        </Box>
-        <BookList
-          filterByAuthor={filterByAuthor}
-          checked={checked}
-          setChecked={setChecked}
-          hideDownloaded={hideDownloaded}
-          hideNonEnglish={hideNonEnglish}
-          onSelectAll={handleSelectAll}
-          onUnselectAll={handleUnselectAll}
-        />
+            <BookList
+              filterByAuthor={filterByAuthor}
+              checked={checked}
+              setChecked={setChecked}
+              hideDownloaded={hideDownloaded}
+              hideNonEnglish={hideNonEnglish}
+              onSelectAll={handleSelectAll}
+              onUnselectAll={handleUnselectAll}
+            />
+          </>
+        )}
       </Box>
 
       <Dialog
