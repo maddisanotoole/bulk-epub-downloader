@@ -29,14 +29,11 @@ import { useDownload, useDeleteAuthor, useAuthors } from "../hooks/useApi";
 const drawerWidth = 260;
 
 export function Layout() {
-  const [open, setOpen] = useState(false);
+  const [showAuthorDrawer, setShowAuthorDrawer] = useState(false);
   const [filterByAuthor, setFilterByAuthor] = useState<string | undefined>(
     undefined
   );
   const [checked, setChecked] = useState<string[]>([]);
-  const [destination, setDestination] = useState<string | undefined>(undefined);
-  const [folderDialogOpen, setFolderDialogOpen] = useState(false);
-  const [tempDestination, setTempDestination] = useState("");
   const [hideDownloaded, setHideDownloaded] = useState(true);
   const [hideNonEnglish, setHideNonEnglish] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -48,7 +45,9 @@ export function Layout() {
 
   const handleDownload = async () => {
     if (checked.length > 0) {
-      await download(checked, destination);
+      const toDownload = checked;
+      setChecked([]);
+      await download(toDownload);
     }
   };
 
@@ -58,29 +57,6 @@ export function Layout() {
 
   const handleUnselectAll = () => {
     setChecked([]);
-  };
-
-  const handleSaveDestination = () => {
-    setDestination(tempDestination || undefined);
-    setFolderDialogOpen(false);
-  };
-
-  const handleSelectFolder = async () => {
-    try {
-      // @ts-ignore - File System Access API
-      if ("showDirectoryPicker" in window) {
-        // @ts-ignore
-        const dirHandle = await window.showDirectoryPicker();
-        const path = dirHandle.name;
-        setTempDestination(path);
-      } else {
-        alert(
-          "Folder picker not supported in this browser. Please enter path manually."
-        );
-      }
-    } catch (err) {
-      console.log("Folder selection cancelled or failed", err);
-    }
   };
 
   const handleDeleteAuthorClick = () => {
@@ -124,7 +100,7 @@ export function Layout() {
           <IconButton
             color="inherit"
             edge="start"
-            onClick={() => setOpen(!open)}
+            onClick={() => setShowAuthorDrawer(!showAuthorDrawer)}
             sx={{ mr: 2 }}
           >
             <MenuIcon />
@@ -140,17 +116,7 @@ export function Layout() {
           >
             {showAddAuthor ? "View Books" : "Add Author"}
           </Button>
-          <Button
-            color="inherit"
-            startIcon={<FolderIcon />}
-            onClick={() => {
-              setTempDestination(destination || "");
-              setFolderDialogOpen(true);
-            }}
-            sx={{ mr: 2 }}
-          >
-            {destination ? "Custom Folder" : "Downloads"}
-          </Button>
+
           <Button
             color="inherit"
             startIcon={
@@ -170,8 +136,8 @@ export function Layout() {
       </AppBar>
       <Drawer
         variant="temporary"
-        open={open}
-        onClose={() => setOpen(false)}
+        open={showAuthorDrawer}
+        onClose={() => setShowAuthorDrawer(false)}
         sx={{
           display: { xs: "none", sm: "block" },
           "& .MuiDrawer-paper": { width: drawerWidth, boxSizing: "border-box" },
@@ -244,45 +210,6 @@ export function Layout() {
           </>
         )}
       </Box>
-
-      <Dialog
-        open={folderDialogOpen}
-        onClose={() => setFolderDialogOpen(false)}
-      >
-        <DialogTitle>Set Download Destination</DialogTitle>
-        <DialogContent>
-          <Box
-            sx={{ display: "flex", gap: 2, alignItems: "flex-start", mt: 1 }}
-          >
-            <TextField
-              autoFocus
-              margin="dense"
-              label="Folder Path (leave empty for Downloads)"
-              type="text"
-              fullWidth
-              variant="outlined"
-              value={tempDestination}
-              onChange={(e) => setTempDestination(e.target.value)}
-              placeholder="e.g., C:\Users\YourName\Documents\Books"
-              helperText="Leave empty to use the Downloads folder"
-            />
-            <Button
-              variant="outlined"
-              onClick={handleSelectFolder}
-              sx={{ mt: 1, minWidth: "120px" }}
-            >
-              Browse...
-            </Button>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setFolderDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleSaveDestination} variant="contained">
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
-
       <Dialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
