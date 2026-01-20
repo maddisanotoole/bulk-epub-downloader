@@ -100,7 +100,13 @@ export function Layout() {
           <IconButton
             color="inherit"
             edge="start"
-            onClick={() => setShowAuthorDrawer(!showAuthorDrawer)}
+            onClick={() => {
+              setShowAuthorDrawer(!showAuthorDrawer);
+
+              if (!showAuthorDrawer) {
+                setShowAddAuthor(false);
+              }
+            }}
             sx={{ mr: 2 }}
           >
             <MenuIcon />
@@ -111,7 +117,9 @@ export function Layout() {
           <Button
             color="inherit"
             startIcon={<AddIcon />}
-            onClick={() => setShowAddAuthor(!showAddAuthor)}
+            onClick={() => {
+              setShowAddAuthor(!showAddAuthor);
+            }}
             sx={{ mr: 2 }}
           >
             {showAddAuthor ? "View Books" : "Add Author"}

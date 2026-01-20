@@ -31,6 +31,7 @@ export function useDownload() {
         if (!res.ok) throw new Error(`Download failed: ${res.status}`);
         completed++;
         setProgress({ completed, total: bookUrls.length });
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       } catch (err: any) {
         setError(err.message ?? `Failed to download ${bookUrl}`);
         break;

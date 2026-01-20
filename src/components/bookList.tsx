@@ -117,7 +117,7 @@ export const BookList = ({
               {l.title}
             </ListItemText>
             <ListItemText style={{ paddingLeft: "5px", width: "10%" }}>
-              {l.bookAuthor}
+              {l.bookAuthor ?? l.author}
             </ListItemText>
 
             <ListItemText style={{ paddingLeft: "5px", width: "10%" }}>
