@@ -126,7 +126,7 @@ export function useDeleteAuthor() {
         `${API_BASE}/authors/${encodeURIComponent(authorSlug)}`,
         {
           method: "DELETE",
-        }
+        },
       );
       if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
       const data = await res.json();
@@ -153,10 +153,10 @@ export function useAddAuthor() {
     setError(null);
     setSuccess(null);
     try {
-      const res = await fetch(`${API_BASE}/scrape-author`, {
+      const res = await fetch(`${API_BASE}/scrape-authors`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ author: authorName }),
+        body: JSON.stringify({ authors: authorName }),
       });
       if (!res.ok) throw new Error(`Add author failed: ${res.status}`);
       const data = await res.json();
@@ -166,9 +166,16 @@ export function useAddAuthor() {
       }
 
       cachedAuthors = null;
-      setSuccess(
-        `Successfully added ${data.books_added} book(s) for ${data.author}`
-      );
+
+      const successCount =
+        data.results?.filter((r: any) => r.success).length || 0;
+      const errorCount = data.errors?.length || 0;
+      let message = `Successfully added ${data.total_books_added} book(s) for ${successCount} author(s)`;
+      if (errorCount > 0) {
+        message += `. ${errorCount} author(s) had errors.`;
+      }
+      setSuccess(message);
+
       return data;
     } catch (err: any) {
       setError(err.message ?? "Failed to add author");

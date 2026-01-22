@@ -17,6 +17,34 @@ scraper = cloudscraper.create_scraper()
 FRONTEND_ORIGIN = "http://localhost:5173"
 DB_PATH =  "../database/links.db"
 
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS links (
+            url TEXT UNIQUE,
+            author TEXT,
+            article TEXT,
+            downloaded INTEGER,
+            title TEXT,
+            book_author TEXT,
+            date TEXT,
+            language TEXT,
+            genre TEXT,
+            image_url TEXT,
+            book_url TEXT,
+            description TEXT,
+            has_epub INTEGER,
+            has_pdf INTEGER
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+init_db()
+
 
 def get_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
@@ -247,6 +275,74 @@ async def scrape_author_endpoint(body: dict):
             
     except Exception as e:
         print(f"Error scraping author: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}, 500
+
+
+@app.post("/scrape-authors")
+async def scrape_authors_endpoint(body: dict):
+    authors_input = body.get("authors")
+    if not authors_input:
+        return {"error": "authors is required"}, 400
+    
+    author_names = [name.strip() for name in authors_input.split(",") if name.strip()]
+    
+    if not author_names:
+        return {"error": "No valid author names provided"}, 400
+    
+    results = []
+    total_books = 0
+    errors = []
+    
+    try:
+        with get_connection() as conn:
+            for author_input in author_names:
+                author = format_author_name(author_input)
+                print(f"Scraping author: {author}")
+                
+                try:
+                    result = scrape_author(author, conn)
+                    
+                    if result['success']:
+                        total_books += result['books_added']
+                        results.append({
+                            "author": result['author'],
+                            "books_added": result['books_added'],
+                            "success": True
+                        })
+                    else:
+                        errors.append({
+                            "author": author,
+                            "error": result.get('error', 'Unknown error')
+                        })
+                        results.append({
+                            "author": author,
+                            "books_added": 0,
+                            "success": False,
+                            "error": result.get('error', 'Unknown error')
+                        })
+                except Exception as e:
+                    error_msg = str(e)
+                    print(f"Error scraping {author}: {error_msg}")
+                    errors.append({"author": author, "error": error_msg})
+                    results.append({
+                        "author": author,
+                        "books_added": 0,
+                        "success": False,
+                        "error": error_msg
+                    })
+        
+        return {
+            "success": True,
+            "total_books_added": total_books,
+            "authors_processed": len(author_names),
+            "results": results,
+            "errors": errors if errors else None
+        }
+            
+    except Exception as e:
+        print(f"Error scraping authors: {e}")
         import traceback
         traceback.print_exc()
         return {"error": str(e)}, 500
