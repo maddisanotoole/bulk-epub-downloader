@@ -6,7 +6,8 @@
     "postinstall": "cd api && python -m pip install -r requirements.txt",
     "author": "cd api && python author_scraper.py",
     "api": "cd api && uvicorn server:app --host 0.0.0.0 --port 8000",
-    "db": "sqlite3 database/links.db"
+    "db": "sqlite3 database/links.db",
+    "dev": "concurrently \"npm run api\" \"npm run start\""
   },
   "name": "advent-of-code",
   "version": "1.0.0",
@@ -21,6 +22,7 @@
     "@types/react-dom": "^18.3.1",
     "@types/sqlite3": "^3.1.11",
     "@vitejs/plugin-react": "^5.0.4",
+    "concurrently": "^9.2.1",
     "typescript": "^5.9.3",
     "vite": "^5.1.3"
   },

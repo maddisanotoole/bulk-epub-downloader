@@ -36,14 +36,15 @@ export function AddAuthor({ onAuthorAdded }: AddAuthorProps) {
         Add New Author
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Enter an author name to scrape their books from OceanOfPDF.(e.g., "j k
-        rowling", "stephen king").
+        Enter one or more author names to scrape their books from OceanOfPDF.
+        Separate multiple authors with commas (e.g., "j k rowling, stephen king,
+        rawnie sabor").
       </Typography>
       <Box component="form" onSubmit={handleSubmit}>
         <TextField
           fullWidth
-          label="Author Name"
-          placeholder="e.g., j k rowling"
+          label="Author Name(s)"
+          placeholder="e.g., j k rowling, stephen king"
           value={authorName}
           onChange={(e) => setAuthorName(e.target.value)}
           disabled={adding}
