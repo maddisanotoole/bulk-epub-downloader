@@ -5,6 +5,12 @@ export type Author = {
   name: string;
 };
 
+export interface DownloadFailure {
+  bookUrl: string;
+  bookTitle: string;
+  error: string;
+}
+
 export type Link = {
   url: string;
   author: string;

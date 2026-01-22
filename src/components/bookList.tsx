@@ -21,6 +21,7 @@ type BookListProps = {
   hideNonEnglish: boolean;
   onSelectAll: (allBookUrls: string[]) => void;
   onUnselectAll: () => void;
+  onBookTitlesUpdate: (titles: Map<string, string>) => void;
 };
 
 export const BookList = ({
@@ -31,6 +32,7 @@ export const BookList = ({
   hideNonEnglish,
   onSelectAll,
   onUnselectAll,
+  onBookTitlesUpdate,
 }: BookListProps) => {
   const { links, loading, error } = useLinks(filterByAuthor);
 
@@ -43,12 +45,22 @@ export const BookList = ({
 
     if (hideNonEnglish) {
       filtered = filtered.filter(
-        (link) => !link.language || link.language.toLowerCase() === "english"
+        (link) => !link.language || link.language.toLowerCase() === "english",
       );
     }
 
     return filtered;
   }, [links, hideDownloaded, hideNonEnglish]);
+
+  // Update book titles map whenever links change
+  useEffect(() => {
+    const titlesMap = new Map<string, string>();
+    links.forEach((link) => {
+      titlesMap.set(link.bookUrl, link.title || "Unknown Book");
+    });
+    onBookTitlesUpdate(titlesMap);
+  }, [links, onBookTitlesUpdate]);
+
   const handleToggle = (value: string) => () => {
     const currentIndex = checked.indexOf(value);
     const newChecked = [...checked];

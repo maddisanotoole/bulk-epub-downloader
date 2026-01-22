@@ -24,30 +24,46 @@ import AddIcon from "@mui/icons-material/Add";
 import { AuthorList } from "./authorList";
 import { BookList } from "./bookList";
 import { AddAuthor } from "./addAuthor";
-import { useDownload, useDeleteAuthor, useAuthors } from "../hooks/useApi";
+import { Notification } from "./notification";
+import {
+  useDownload,
+  useDeleteAuthor,
+  useAuthors,
+  useCleanupAuthors,
+  useDeleteAllAuthors,
+} from "../hooks/useApi";
 
 const drawerWidth = 260;
 
 export function Layout() {
   const [showAuthorDrawer, setShowAuthorDrawer] = useState(false);
   const [filterByAuthor, setFilterByAuthor] = useState<string | undefined>(
-    undefined
+    undefined,
   );
   const [checked, setChecked] = useState<string[]>([]);
   const [hideDownloaded, setHideDownloaded] = useState(true);
   const [hideNonEnglish, setHideNonEnglish] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
+  const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
   const [refreshAuthors, setRefreshAuthors] = useState(0);
   const [showAddAuthor, setShowAddAuthor] = useState(false);
-  const { download, downloading, progress } = useDownload();
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [bookTitles, setBookTitles] = useState<Map<string, string>>(new Map());
+  const { download, downloading, progress, failures } = useDownload();
   const { deleteAuthor, deleting } = useDeleteAuthor();
+  const { cleanupAuthors, cleaning } = useCleanupAuthors();
+  const { deleteAllAuthors, deleting: deletingAll } = useDeleteAllAuthors();
   const { authors } = useAuthors(refreshAuthors > 0);
 
   const handleDownload = async () => {
     if (checked.length > 0) {
       const toDownload = checked;
       setChecked([]);
-      await download(toDownload);
+      await download(toDownload, bookTitles);
+      if (failures.length > 0) {
+        setNotificationOpen(true);
+      }
     }
   };
 
@@ -79,8 +95,55 @@ export function Layout() {
     }
   };
 
+  const handleCleanupClick = () => {
+    setCleanupDialogOpen(true);
+  };
+
+  const handleConfirmCleanup = async () => {
+    try {
+      const result = await cleanupAuthors();
+      setCleanupDialogOpen(false);
+      setFilterByAuthor(undefined);
+      setChecked([]);
+      setRefreshAuthors((prev) => prev + 1);
+      console.log(
+        `Cleanup complete: ${result.authors_deleted} author(s) deleted`,
+      );
+      window.location.reload();
+    } catch (err) {
+      console.error("Failed to cleanup authors", err);
+    }
+  };
+
+  const handleDeleteAllClick = () => {
+    setDeleteAllDialogOpen(true);
+  };
+
+  const handleConfirmDeleteAll = async () => {
+    try {
+      const result = await deleteAllAuthors();
+      setDeleteAllDialogOpen(false);
+      setFilterByAuthor(undefined);
+      setChecked([]);
+      console.log(
+        `Deleted all: ${result.authors_deleted} author(s), ${result.books_deleted} book(s)`,
+      );
+      window.location.reload();
+    } catch (err) {
+      console.error("Failed to delete all authors", err);
+    }
+  };
+
   const handleAuthorAdded = () => {
     setRefreshAuthors((prev) => prev + 1);
+  };
+
+  const handleBookTitlesUpdate = (titles: Map<string, string>) => {
+    setBookTitles(titles);
+  };
+
+  const handleCloseNotification = () => {
+    setNotificationOpen(false);
   };
 
   const drawer = (
@@ -89,6 +152,28 @@ export function Layout() {
         Authors
       </Typography>
       <AuthorList setFilterByAuthor={setFilterByAuthor} />
+      <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 1 }}>
+        <Button
+          variant="outlined"
+          color="warning"
+          size="small"
+          fullWidth
+          onClick={handleCleanupClick}
+          disabled={cleaning}
+        >
+          {cleaning ? "Cleaning..." : "Cleanup Downloaded"}
+        </Button>
+        <Button
+          variant="outlined"
+          color="error"
+          size="small"
+          fullWidth
+          onClick={handleDeleteAllClick}
+          disabled={deletingAll}
+        >
+          {deletingAll ? "Deleting..." : "Delete All"}
+        </Button>
+      </Box>
     </Box>
   );
 
@@ -138,7 +223,8 @@ export function Layout() {
             disabled={checked.length === 0 || downloading}
           >
             Download Selected ({checked.length})
-            {downloading && ` - ${progress.completed}/${progress.total}`}
+            {downloading &&
+              ` - ${progress.completed}/${progress.total}${progress.failed > 0 ? ` (${progress.failed} failed)` : ""}`}
           </Button>
         </Toolbar>
       </AppBar>
@@ -214,6 +300,7 @@ export function Layout() {
               hideNonEnglish={hideNonEnglish}
               onSelectAll={handleSelectAll}
               onUnselectAll={handleUnselectAll}
+              onBookTitlesUpdate={handleBookTitlesUpdate}
             />
           </>
         )}
@@ -244,6 +331,58 @@ export function Layout() {
           </Button>
         </DialogActions>
       </Dialog>
+      <Dialog
+        open={cleanupDialogOpen}
+        onClose={() => setCleanupDialogOpen(false)}
+      >
+        <DialogTitle>Cleanup Downloaded Authors</DialogTitle>
+        <DialogContent>
+          <Typography>
+            This will delete all authors who have no undownloaded books (all
+            their books have been downloaded). This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCleanupDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleConfirmCleanup}
+            variant="contained"
+            color="warning"
+            disabled={cleaning}
+          >
+            {cleaning ? "Cleaning..." : "Cleanup"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={deleteAllDialogOpen}
+        onClose={() => setDeleteAllDialogOpen(false)}
+      >
+        <DialogTitle>Delete All Authors and Books</DialogTitle>
+        <DialogContent>
+          <Typography>
+            <strong>WARNING:</strong> This will permanently delete ALL authors
+            and ALL books from the database, regardless of download status. This
+            action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteAllDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleConfirmDeleteAll}
+            variant="contained"
+            color="error"
+            disabled={deletingAll}
+          >
+            {deletingAll ? "Deleting..." : "Delete All"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Notification
+        open={notificationOpen}
+        onClose={handleCloseNotification}
+        failures={failures}
+      />
     </Box>
   );
 }

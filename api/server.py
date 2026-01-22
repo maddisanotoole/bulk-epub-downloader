@@ -71,11 +71,12 @@ async def downloadFile(body: dict):
     from os import makedirs
     from bs4 import BeautifulSoup
 
-    book_url = body.get("bookUrl") 
+    book_url = body.get("bookUrl")
+    book_title = body.get("bookTitle", "Unknown Book") 
     custom_destination = body.get("destination")
     
     if not book_url:
-        return {"error": "bookUrl is required"}, 400
+        return {"error": "bookUrl is required", "bookUrl": book_url, "bookTitle": book_title}, 400
     
     try:
         if custom_destination:
@@ -93,7 +94,7 @@ async def downloadFile(body: dict):
         
         if not forms:
             print("No download forms found")
-            return {"error": "Could not find download form on page"}, 404
+            return {"error": "Could not find download form on page", "bookUrl": book_url, "bookTitle": book_title}, 404
         
         # Prefer epub over pdf
         selected_form = None
@@ -119,7 +120,7 @@ async def downloadFile(body: dict):
         
         if not selected_form:
             print("No valid download form found")
-            return {"error": "Could not find epub or pdf download form"}, 404
+            return {"error": "Could not find epub or pdf download form", "bookUrl": book_url, "bookTitle": book_title}, 404
         
         form_action = selected_form.get('action')
         form_id = selected_form.find('input', {'name': 'id'})
@@ -127,7 +128,7 @@ async def downloadFile(body: dict):
         
         if not form_action or not form_id or not form_filename:
             print("Form missing required fields")
-            return {"error": "Download form is incomplete"}, 404
+            return {"error": "Download form is incomplete", "bookUrl": book_url, "bookTitle": book_title}, 404
         
         server_id = form_id.get('value')
         filename = form_filename.get('value')
@@ -149,7 +150,7 @@ async def downloadFile(body: dict):
         
         if not meta_refresh:
             print("Could not find redirect URL")
-            return {"error": "Could not find download redirect"}, 404
+            return {"error": "Could not find download redirect", "bookUrl": book_url, "bookTitle": book_title}, 404
         
         content_attr = meta_refresh.get('content', '')
         if 'url=' in content_attr:
@@ -157,7 +158,7 @@ async def downloadFile(body: dict):
             print(f"Found actual download URL: {actual_download_url}")
         else:
             print("Could not parse redirect URL")
-            return {"error": "Could not parse download URL"}, 404
+            return {"error": "Could not parse download URL", "bookUrl": book_url, "bookTitle": book_title}, 404
         
         print(f"Downloading file from: {actual_download_url}")
         file_response = scraper.get(actual_download_url, headers=headers, allow_redirects=True)
@@ -182,7 +183,7 @@ async def downloadFile(body: dict):
         print(f"Error downloading: {e}")
         import traceback
         traceback.print_exc()
-        return {"error": str(e)}, 500
+        return {"error": str(e), "bookUrl": book_url, "bookTitle": book_title}, 500
 
 @app.get("/authors")
 async def get_all_authors():
@@ -230,6 +231,81 @@ async def get_links(author: Optional[str] = Query(default=None)):
         }
         for row in rows
     ]
+
+
+@app.delete("/authors/cleanup")
+async def cleanup_downloaded_authors():
+    try:
+        with get_connection() as conn:
+            cur = conn.execute("""
+                SELECT author, book_author, COUNT(*) as total_books, 
+                       SUM(CASE WHEN downloaded = 1 THEN 1 ELSE 0 END) as downloaded_books
+                FROM links
+                WHERE author IS NOT NULL AND author != ''
+                GROUP BY author
+                HAVING total_books = downloaded_books
+            """)
+            authors_to_delete = cur.fetchall()
+            
+            deleted_authors = []
+            total_books_deleted = 0
+            
+            for row in authors_to_delete:
+                author_slug = row["author"]
+                author_name = row["book_author"] or author_slug
+                result = conn.execute(
+                    "DELETE FROM links WHERE author = ?",
+                    (author_slug,)
+                )
+                books_deleted = result.rowcount
+                total_books_deleted += books_deleted
+                deleted_authors.append(author_name)
+            
+            conn.commit()
+        
+        print(f"Cleanup: Deleted {len(deleted_authors)} author(s) with {total_books_deleted} book(s)")
+        return {
+            "success": True,
+            "authors_deleted": len(deleted_authors),
+            "books_deleted": total_books_deleted,
+            "deleted_author_names": deleted_authors
+        }
+    except Exception as e:
+        print(f"Error during cleanup: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}, 500
+
+
+@app.delete("/authors/all")
+async def delete_all_authors():
+    """Delete all authors and books from the database."""
+    try:
+        with get_connection() as conn:
+            cur = conn.execute("""
+                SELECT COUNT(DISTINCT author) as author_count, COUNT(*) as book_count
+                FROM links
+                WHERE author IS NOT NULL AND author != ''
+            """)
+            stats = cur.fetchone()
+            author_count = stats["author_count"]
+            book_count = stats["book_count"]
+            
+            # Delete all records
+            conn.execute("DELETE FROM links")
+            conn.commit()
+        
+        print(f"Deleted all {author_count} author(s) and {book_count} book(s)")
+        return {
+            "success": True,
+            "authors_deleted": author_count,
+            "books_deleted": book_count
+        }
+    except Exception as e:
+        print(f"Error deleting all: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}, 500
 
 
 @app.delete("/authors/{author_slug}")

@@ -5,20 +5,40 @@ const API_BASE = "http://localhost:8000";
 
 let cachedAuthors: Authors | null = null;
 
+export interface DownloadFailure {
+  bookUrl: string;
+  bookTitle: string;
+  error: string;
+}
+
 export function useDownload() {
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [progress, setProgress] = useState({ completed: 0, total: 0 });
+  const [progress, setProgress] = useState({
+    completed: 0,
+    total: 0,
+    failed: 0,
+  });
+  const [failures, setFailures] = useState<DownloadFailure[]>([]);
 
-  const download = async (bookUrls: string[], destination?: string) => {
+  const download = async (
+    bookUrls: string[],
+    bookTitles: Map<string, string>,
+    destination?: string,
+  ) => {
     setDownloading(true);
     setError(null);
-    setProgress({ completed: 0, total: bookUrls.length });
+    setFailures([]);
+    setProgress({ completed: 0, total: bookUrls.length, failed: 0 });
 
     let completed = 0;
+    let failed = 0;
+    const failedDownloads: DownloadFailure[] = [];
+
     for (const bookUrl of bookUrls) {
       try {
-        const body: any = { bookUrl };
+        const bookTitle = bookTitles.get(bookUrl) || "Unknown Book";
+        const body: any = { bookUrl, bookTitle };
         if (destination) {
           body.destination = destination;
         }
@@ -28,20 +48,46 @@ export function useDownload() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         });
-        if (!res.ok) throw new Error(`Download failed: ${res.status}`);
-        completed++;
-        setProgress({ completed, total: bookUrls.length });
+
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+          const errorMsg =
+            data.error || `Download failed with status: ${res.status}`;
+          failedDownloads.push({
+            bookUrl: data.bookUrl || bookUrl,
+            bookTitle: data.bookTitle || bookTitle,
+            error: errorMsg,
+          });
+          failed++;
+        } else {
+          completed++;
+        }
+
+        setProgress({ completed, total: bookUrls.length, failed });
+        setFailures([...failedDownloads]);
         await new Promise((resolve) => setTimeout(resolve, 1000));
       } catch (err: any) {
-        setError(err.message ?? `Failed to download ${bookUrl}`);
-        break;
+        const bookTitle = bookTitles.get(bookUrl) || "Unknown Book";
+        failedDownloads.push({
+          bookUrl,
+          bookTitle,
+          error: err.message ?? "Network error",
+        });
+        failed++;
+        setProgress({ completed, total: bookUrls.length, failed });
+        setFailures([...failedDownloads]);
       }
     }
 
     setDownloading(false);
+
+    if (failedDownloads.length > 0) {
+      setError(`${failedDownloads.length} download(s) failed`);
+    }
   };
 
-  return { download, downloading, error, progress } as const;
+  return { download, downloading, error, progress, failures } as const;
 }
 
 export function useAuthors(refresh: boolean = false) {
@@ -166,16 +212,9 @@ export function useAddAuthor() {
       }
 
       cachedAuthors = null;
-
-      const successCount =
-        data.results?.filter((r: any) => r.success).length || 0;
-      const errorCount = data.errors?.length || 0;
-      let message = `Successfully added ${data.total_books_added} book(s) for ${successCount} author(s)`;
-      if (errorCount > 0) {
-        message += `. ${errorCount} author(s) had errors.`;
-      }
-      setSuccess(message);
-
+      setSuccess(
+        `Successfully added ${data.books_added} book(s) for ${data.author}`,
+      );
       return data;
     } catch (err: any) {
       setError(err.message ?? "Failed to add author");
@@ -186,4 +225,56 @@ export function useAddAuthor() {
   };
 
   return { addAuthor, adding, error, success } as const;
+}
+
+export function useCleanupAuthors() {
+  const [cleaning, setCleaning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const cleanupAuthors = async () => {
+    setCleaning(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/authors/cleanup`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error(`Cleanup failed: ${res.status}`);
+      const data = await res.json();
+      cachedAuthors = null;
+      return data;
+    } catch (err: any) {
+      setError(err.message ?? "Failed to cleanup authors");
+      throw err;
+    } finally {
+      setCleaning(false);
+    }
+  };
+
+  return { cleanupAuthors, cleaning, error } as const;
+}
+
+export function useDeleteAllAuthors() {
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const deleteAllAuthors = async () => {
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/authors/all`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error(`Delete all failed: ${res.status}`);
+      const data = await res.json();
+      cachedAuthors = null;
+      return data;
+    } catch (err: any) {
+      setError(err.message ?? "Failed to delete all authors");
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return { deleteAllAuthors, deleting, error } as const;
 }
