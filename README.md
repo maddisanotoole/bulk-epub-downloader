@@ -1,6 +1,6 @@
 # Bulk EPUB Downloader
 
-Automation for downloading epubs. 
+Automation for downloading epubs.
 
 ## Setup:
 
@@ -9,16 +9,17 @@ npm i
 ```
 
 ## Start App:
+
 Run backend and FE to see the list of available books. You can then multi-select and download.
-It will prefer epubs, but will grab pdf if only that is available. 
+It will prefer epubs, but will grab pdf if only that is available.
 
 ```bash
-npm run api
-npm run start
+npm run dev
 ```
 
 ## Get Book links:
-Book links are stored in a sqlite3 db file. 
+
+Book links are stored in a sqlite3 db file.
 
 They can be added by author, via the 'Add Author' button.
 
@@ -27,13 +28,14 @@ OR in the terminal
 ```bash
 npm run author
 ```
+
 You will be prompted for an author name (e.g. "j k rowling")
 
-Optional: 
+Optional:
 If you need to query db from terminal
 
 ```bash
-sqlite3 database/links.db 
+sqlite3 database/links.db
 // OR
 npm run db
 
@@ -46,8 +48,7 @@ select author, url from links;
 This is a WIP
 
 Known issues / upcoming features:
-* Folder selection not working, leave as is to default to download folder
-* Allow user to pick between pdf & epub
-* Better filtering
-* Allow searching
-* Allow clearing of downloaded/unwanted links
+
+- Allow user to pick between pdf & epub
+- Better filtering
+- Allow searching
