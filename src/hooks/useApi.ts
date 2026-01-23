@@ -212,9 +212,12 @@ export function useAddAuthor() {
       }
 
       cachedAuthors = null;
-      setSuccess(
-        `Successfully added ${data.books_added} book(s) for ${data.author}`,
-      );
+      const results: string[] = [];
+      for (const result of data.results) {
+        results.push(`${result.books_added} book(s) for ${result.author}`);
+      }
+
+      setSuccess(`Successfully added ${results.join(", ")}`);
       return data;
     } catch (err: any) {
       setError(err.message ?? "Failed to add author");
