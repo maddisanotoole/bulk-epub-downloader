@@ -11,7 +11,8 @@ export const AuthorList = ({
   if (error) return <p>Error: {error}</p>;
   if (loading) return <p>Loading...</p>;
 
-  if (Object.keys(authors).length === 0) return <p>No authors</p>;
+  if (Object.keys(authors).length === 0)
+    return <p style={{ paddingTop: "20px" }}>No authors</p>;
 
   return (
     <List dense>

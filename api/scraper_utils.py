@@ -85,8 +85,25 @@ def scrape_author(author, db_connection):
             
             print(f"Scraping {url}")
             
+            max_retries = 3
+            retry_delay = 2
+            response = None
+            
+            for attempt in range(max_retries):
+                try:
+                    response = scraper.get(url, headers=headers)
+                    break 
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        wait_time = retry_delay * (attempt + 1)
+                        print(f"Connection error (attempt {attempt + 1}/{max_retries}): {e}")
+                        print(f"Retrying in {wait_time} seconds...")
+                        time.sleep(wait_time)
+                    else:
+                        print(f"Failed after {max_retries} attempts: {e}")
+                        raise
+            
             try:
-                response = scraper.get(url, headers=headers)
                 html = BeautifulSoup(response.text, "html.parser")
                 
                 articles = html.find_all("article")

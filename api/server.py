@@ -87,7 +87,25 @@ async def downloadFile(body: dict):
         makedirs(destination, exist_ok=True)
         print(f"Fetching book page: {book_url}")
         
-        response = scraper.get(book_url, headers=headers)
+        max_retries = 3
+        retry_delay = 2
+        response = None
+        
+        for attempt in range(max_retries):
+            try:
+                response = scraper.get(book_url, headers=headers)
+                break
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    wait_time = retry_delay * (attempt + 1)
+                    print(f"Connection error fetching book page (attempt {attempt + 1}/{max_retries}): {e}")
+                    print(f"Retrying in {wait_time} seconds...")
+                    import time
+                    time.sleep(wait_time)
+                else:
+                    print(f"Failed to fetch book page after {max_retries} attempts")
+                    raise
+        
         html = BeautifulSoup(response.text, "html.parser")
         
         forms = html.find_all('form', {'action': lambda x: x and 'Fetching_Resource.php' in x})
@@ -143,7 +161,23 @@ async def downloadFile(body: dict):
         }
         
         print(f"Submitting form to download file...")
-        download_response = scraper.post(form_action, data=form_data, headers=headers, allow_redirects=True)
+        
+        # Retry form submission
+        download_response = None
+        for attempt in range(max_retries):
+            try:
+                download_response = scraper.post(form_action, data=form_data, headers=headers, allow_redirects=True)
+                break
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    wait_time = retry_delay * (attempt + 1)
+                    print(f"Connection error submitting form (attempt {attempt + 1}/{max_retries}): {e}")
+                    print(f"Retrying in {wait_time} seconds...")
+                    import time
+                    time.sleep(wait_time)
+                else:
+                    print(f"Failed to submit form after {max_retries} attempts")
+                    raise
         
         redirect_html = BeautifulSoup(download_response.text, "html.parser")
         meta_refresh = redirect_html.find('meta', attrs={'http-equiv': 'Refresh'})
@@ -161,7 +195,23 @@ async def downloadFile(body: dict):
             return {"error": "Could not parse download URL", "bookUrl": book_url, "bookTitle": book_title}, 404
         
         print(f"Downloading file from: {actual_download_url}")
-        file_response = scraper.get(actual_download_url, headers=headers, allow_redirects=True)
+        
+        # Retry file download
+        file_response = None
+        for attempt in range(max_retries):
+            try:
+                file_response = scraper.get(actual_download_url, headers=headers, allow_redirects=True)
+                break
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    wait_time = retry_delay * (attempt + 1)
+                    print(f"Connection error downloading file (attempt {attempt + 1}/{max_retries}): {e}")
+                    print(f"Retrying in {wait_time} seconds...")
+                    import time
+                    time.sleep(wait_time)
+                else:
+                    print(f"Failed to download file after {max_retries} attempts")
+                    raise
         
         filepath = join(destination, filename)
         with open(filepath, 'wb') as file:
