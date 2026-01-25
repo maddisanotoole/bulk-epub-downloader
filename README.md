@@ -42,13 +42,3 @@ npm run db
 // THEN
 select author, url from links;
 ```
-
-# Notes
-
-This is a WIP
-
-Known issues / upcoming features:
-
-- Allow user to pick between pdf & epub
-- Better filtering
-- Allow searching
