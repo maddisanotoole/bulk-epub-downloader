@@ -9,7 +9,6 @@ import {
   Typography,
   Button,
   CircularProgress,
-  TextField,
   Dialog,
   DialogActions,
   DialogContent,
@@ -19,7 +18,6 @@ import {
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import DownloadIcon from "@mui/icons-material/Download";
-import FolderIcon from "@mui/icons-material/Folder";
 import AddIcon from "@mui/icons-material/Add";
 import { AuthorList } from "./authorList";
 import { BookList } from "./bookList";
@@ -32,6 +30,7 @@ import {
   useCleanupAuthors,
   useDeleteAllAuthors,
 } from "../hooks/useApi";
+import { SearchBar } from "./searchBar";
 
 const drawerWidth = 260;
 
@@ -55,6 +54,7 @@ export function Layout() {
   const { cleanupAuthors, cleaning } = useCleanupAuthors();
   const { deleteAllAuthors, deleting: deletingAll } = useDeleteAllAuthors();
   const { authors } = useAuthors(refreshAuthors > 0);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleDownload = async () => {
     if (checked.length > 0) {
@@ -244,6 +244,10 @@ export function Layout() {
           <AddAuthor onAuthorAdded={handleAuthorAdded} />
         ) : (
           <>
+            <SearchBar
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+            ></SearchBar>
             <Box sx={{ mb: 2, display: "flex", gap: 2, alignItems: "center" }}>
               {filterByAuthor && (
                 <Box sx={{ mr: 2 }}>
@@ -301,6 +305,7 @@ export function Layout() {
               onSelectAll={handleSelectAll}
               onUnselectAll={handleUnselectAll}
               onBookTitlesUpdate={handleBookTitlesUpdate}
+              searchQuery={searchQuery}
             />
           </>
         )}

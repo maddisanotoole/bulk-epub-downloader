@@ -12,8 +12,9 @@ import {
   ListItemText,
   TextField,
   InputAdornment,
+  IconButton,
 } from "@mui/material";
-import { Image as ImageIcon, Search as SearchIcon } from "@mui/icons-material";
+import { Image as ImageIcon } from "@mui/icons-material";
 
 type BookListProps = {
   filterByAuthor?: string;
@@ -24,6 +25,7 @@ type BookListProps = {
   onSelectAll: (allBookUrls: string[]) => void;
   onUnselectAll: () => void;
   onBookTitlesUpdate: (titles: Map<string, string>) => void;
+  searchQuery: string;
 };
 
 export const BookList = ({
@@ -35,9 +37,9 @@ export const BookList = ({
   onSelectAll,
   onUnselectAll,
   onBookTitlesUpdate,
+  searchQuery,
 }: BookListProps) => {
   const { links, loading, error } = useLinks(filterByAuthor);
-  const [searchQuery, setSearchQuery] = useState("");
 
   const filteredLinks = useMemo(() => {
     let filtered = links;
@@ -101,21 +103,6 @@ export const BookList = ({
   return (
     <>
       <Box sx={{ mb: 2 }}>
-        <TextField
-          fullWidth
-          size="small"
-          placeholder="Search books by title, author, genre, or description..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-          sx={{ mb: 2 }}
-        />
         <Box sx={{ display: "flex", gap: 2 }}>
           <Button
             variant="outlined"
