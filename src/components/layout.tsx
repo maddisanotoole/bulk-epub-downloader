@@ -55,6 +55,9 @@ export function Layout() {
   const { deleteAllAuthors, deleting: deletingAll } = useDeleteAllAuthors();
   const { authors } = useAuthors(refreshAuthors > 0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filteredBookCount, setFilteredBookCount] = useState(0);
+  const [allVisibleBookUrls, setAllVisibleBookUrls] = useState<string[]>([]);
+  const [allBooksSelected, setAllBooksSelected] = useState(false);
 
   const handleDownload = async () => {
     if (checked.length > 0) {
@@ -140,6 +143,16 @@ export function Layout() {
 
   const handleBookTitlesUpdate = (titles: Map<string, string>) => {
     setBookTitles(titles);
+  };
+
+  const handleFilteredCountUpdate = (
+    count: number,
+    allUrls: string[],
+    allSelected: boolean,
+  ) => {
+    setFilteredBookCount(count);
+    setAllVisibleBookUrls(allUrls);
+    setAllBooksSelected(allSelected);
   };
 
   const handleCloseNotification = () => {
@@ -244,69 +257,121 @@ export function Layout() {
           <AddAuthor onAuthorAdded={handleAuthorAdded} />
         ) : (
           <>
-            <SearchBar
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-            ></SearchBar>
-            <Box sx={{ mb: 2, display: "flex", gap: 2, alignItems: "center" }}>
-              {filterByAuthor && (
-                <Box sx={{ mr: 2 }}>
-                  <Typography
-                    variant="subtitle1"
-                    component="span"
-                    sx={{ mr: 2 }}
-                  >
-                    Viewing: {authors[filterByAuthor] || filterByAuthor}
-                  </Typography>
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    size="small"
-                    onClick={handleDeleteAuthorClick}
-                    disabled={deleting}
-                    sx={{ mr: 2 }}
-                  >
-                    {deleting ? "Deleting..." : "Delete Author"}
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => setFilterByAuthor(undefined)}
-                  >
-                    Clear Filter
-                  </Button>
-                </Box>
-              )}
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={hideDownloaded}
-                    onChange={(e) => setHideDownloaded(e.target.checked)}
-                  />
-                }
-                label="Hide downloaded books"
-              />
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={hideNonEnglish}
-                    onChange={(e) => setHideNonEnglish(e.target.checked)}
-                  />
-                }
-                label="English only"
+            <Box
+              sx={{
+                // mb: 2,
+
+                display: "flex",
+                flexDirection: "column",
+                position: "fixed",
+                gap: 2,
+                alignItems: "center",
+                backgroundColor: "white",
+                zIndex: 8,
+                width: "100%",
+              }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "row",
+                  gap: 2,
+                  alignItems: "center",
+                  width: "100%",
+                }}
+              >
+                <SearchBar
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                ></SearchBar>
+                {filterByAuthor && (
+                  <Box sx={{ mr: 2 }}>
+                    <Typography
+                      variant="subtitle1"
+                      component="span"
+                      sx={{ mr: 2 }}
+                    >
+                      Viewing: {authors[filterByAuthor] || filterByAuthor}
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      onClick={handleDeleteAuthorClick}
+                      disabled={deleting}
+                      sx={{ mr: 2 }}
+                    >
+                      {deleting ? "Deleting..." : "Delete Author"}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => setFilterByAuthor(undefined)}
+                    >
+                      Clear Filter
+                    </Button>
+                  </Box>
+                )}
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={hideDownloaded}
+                      onChange={(e) => setHideDownloaded(e.target.checked)}
+                    />
+                  }
+                  label="Hide downloaded books"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={hideNonEnglish}
+                      onChange={(e) => setHideNonEnglish(e.target.checked)}
+                    />
+                  }
+                  label="English only"
+                />
+              </Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: 2,
+                  alignItems: "center",
+                  flexDirection: "row",
+                  width: "100%",
+                }}
+              >
+                <Button
+                  variant="outlined"
+                  onClick={() =>
+                    allBooksSelected
+                      ? handleUnselectAll()
+                      : handleSelectAll(allVisibleBookUrls)
+                  }
+                  size="small"
+                >
+                  {allBooksSelected ? "Unselect All" : "Select All"}
+                </Button>
+                <Typography variant="body2" color="text.secondary">
+                  Showing {filteredBookCount} book
+                  {filteredBookCount !== 1 ? "s" : ""}
+                </Typography>
+              </Box>
+            </Box>
+
+            <Box marginTop={"80px"} zIndex={-33}>
+              <BookList
+                filterByAuthor={filterByAuthor}
+                checked={checked}
+                setChecked={setChecked}
+                hideDownloaded={hideDownloaded}
+                hideNonEnglish={hideNonEnglish}
+                onSelectAll={handleSelectAll}
+                onUnselectAll={handleUnselectAll}
+                onBookTitlesUpdate={handleBookTitlesUpdate}
+                searchQuery={searchQuery}
+                onFilteredCountUpdate={handleFilteredCountUpdate}
               />
             </Box>
-            <BookList
-              filterByAuthor={filterByAuthor}
-              checked={checked}
-              setChecked={setChecked}
-              hideDownloaded={hideDownloaded}
-              hideNonEnglish={hideNonEnglish}
-              onSelectAll={handleSelectAll}
-              onUnselectAll={handleUnselectAll}
-              onBookTitlesUpdate={handleBookTitlesUpdate}
-              searchQuery={searchQuery}
-            />
           </>
         )}
       </Box>
