@@ -252,23 +252,22 @@ export function Layout() {
       >
         {drawer}
       </Drawer>
-      <Box component="main" sx={{ flexGrow: 1, p: 3, mt: 8 }}>
+      <Box component="main" sx={{ flexGrow: 1, p: 3, mt: 5 }}>
         {showAddAuthor ? (
           <AddAuthor onAuthorAdded={handleAuthorAdded} />
         ) : (
           <>
             <Box
               sx={{
-                // mb: 2,
-
                 display: "flex",
                 flexDirection: "column",
                 position: "fixed",
-                gap: 2,
+                gap: 3,
                 alignItems: "center",
                 backgroundColor: "white",
                 zIndex: 8,
                 width: "100%",
+                pt: 2,
               }}
             >
               <Box
@@ -333,6 +332,7 @@ export function Layout() {
               </Box>
               <Box
                 sx={{
+                  mb: 2,
                   display: "flex",
                   gap: 2,
                   alignItems: "center",
