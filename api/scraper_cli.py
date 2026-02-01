@@ -1,5 +1,5 @@
 from sqlmodel import Session
-from scraper_utils import scrape_author, format_author_name
+from api.utils.scraper_utils import scrape_author, format_author_name
 from models import create_db_and_tables, engine
 
 create_db_and_tables()

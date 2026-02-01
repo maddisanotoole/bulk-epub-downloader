@@ -1,5 +1,4 @@
-import pytest
-from scraper_utils import parse_article_html, format_author_name
+from utils.scraper_utils import parse_article_html, format_author_name
 
 
 def test_format_author_name():

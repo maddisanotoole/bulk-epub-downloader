@@ -1,4 +1,9 @@
 import pytest
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from sqlmodel import Session, create_engine, SQLModel
 from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient

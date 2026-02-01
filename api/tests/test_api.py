@@ -82,7 +82,6 @@ def test_delete_author(client: TestClient, session: Session, sample_link: Link):
     assert response.json()["success"] is True
     assert response.json()["deleted_count"] == 1
     
-    # Verify deletion
     links = session.exec(select(Link)).all()
     assert len(links) == 0
 
