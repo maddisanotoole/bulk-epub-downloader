@@ -10,8 +10,10 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  TextField,
+  InputAdornment,
 } from "@mui/material";
-import { Image as ImageIcon } from "@mui/icons-material";
+import { Image as ImageIcon, Search as SearchIcon } from "@mui/icons-material";
 
 type BookListProps = {
   filterByAuthor?: string;
@@ -35,6 +37,7 @@ export const BookList = ({
   onBookTitlesUpdate,
 }: BookListProps) => {
   const { links, loading, error } = useLinks(filterByAuthor);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const filteredLinks = useMemo(() => {
     let filtered = links;
@@ -49,8 +52,20 @@ export const BookList = ({
       );
     }
 
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (link) =>
+          link.title?.toLowerCase().includes(query) ||
+          link.bookAuthor?.toLowerCase().includes(query) ||
+          link.author?.toLowerCase().includes(query) ||
+          link.genre?.toLowerCase().includes(query) ||
+          link.description?.toLowerCase().includes(query),
+      );
+    }
+
     return filtered;
-  }, [links, hideDownloaded, hideNonEnglish]);
+  }, [links, hideDownloaded, hideNonEnglish, searchQuery]);
 
   // Update book titles map whenever links change
   useEffect(() => {
@@ -85,25 +100,42 @@ export const BookList = ({
 
   return (
     <>
-      <Box sx={{ mb: 2, display: "flex", gap: 2 }}>
-        <Button
-          variant="outlined"
-          onClick={() =>
-            allSelected ? onUnselectAll() : onSelectAll(allBookUrls)
-          }
+      <Box sx={{ mb: 2 }}>
+        <TextField
+          fullWidth
           size="small"
-        >
-          {allSelected ? "Unselect All" : "Select All"}
-        </Button>
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            color: "text.secondary",
+          placeholder="Search books by title, author, genre, or description..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
           }}
-        >
-          Showing {filteredLinks.length} book
-          {filteredLinks.length !== 1 ? "s" : ""}
+          sx={{ mb: 2 }}
+        />
+        <Box sx={{ display: "flex", gap: 2 }}>
+          <Button
+            variant="outlined"
+            onClick={() =>
+              allSelected ? onUnselectAll() : onSelectAll(allBookUrls)
+            }
+            size="small"
+          >
+            {allSelected ? "Unselect All" : "Select All"}
+          </Button>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              color: "text.secondary",
+            }}
+          >
+            Showing {filteredLinks.length} book
+            {filteredLinks.length !== 1 ? "s" : ""}
+          </Box>
         </Box>
       </Box>
       <List dense>
