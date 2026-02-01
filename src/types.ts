@@ -27,3 +27,16 @@ export type Link = {
   hasEpub: boolean;
   hasPdf: boolean;
 };
+
+export type QueueItem = {
+  id: number;
+  bookTitle: string;
+  bookUrl: string;
+  bookAuthor?: string;
+  status: string;
+  retryCount: number;
+  errorMessage?: string;
+  createdAt: string;
+  startedAt?: string;
+  completedAt?: string;
+};
