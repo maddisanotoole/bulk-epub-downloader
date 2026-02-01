@@ -1,9 +1,11 @@
 import time
 import random
-import sqlite3
+from sqlalchemy.exc import IntegrityError
 import cloudscraper
 from bs4 import BeautifulSoup
+from models import Link
 
+from constants import QueueStatus, MAX_RETRY_COUNT
 headers = {'Accept-Encoding': 'identity', 'User-Agent': 'Defined'}
 scraper = cloudscraper.create_scraper()
 
@@ -72,7 +74,7 @@ def format_author_name(author_input):
     return author_input.strip().lower().replace(' ', '-').replace('.','').replace(',','')
 
 
-def scrape_author(author, db_connection):
+def scrape_author(author, session):
     books_added = 0
     page = 1
     
@@ -85,22 +87,21 @@ def scrape_author(author, db_connection):
             
             print(f"Scraping {url}")
             
-            max_retries = 3
             retry_delay = 2
             response = None
             
-            for attempt in range(max_retries):
+            for attempt in range(MAX_RETRY_COUNT):
                 try:
                     response = scraper.get(url, headers=headers)
                     break 
                 except Exception as e:
-                    if attempt < max_retries - 1:
+                    if attempt < MAX_RETRY_COUNT - 1:
                         wait_time = retry_delay * (attempt + 1)
-                        print(f"Connection error (attempt {attempt + 1}/{max_retries}): {e}")
+                        print(f"Connection error (attempt {attempt + 1}/{MAX_RETRY_COUNT}): {e}")
                         print(f"Retrying in {wait_time} seconds...")
                         time.sleep(wait_time)
                     else:
-                        print(f"Failed after {max_retries} attempts: {e}")
+                        print(f"Failed after {MAX_RETRY_COUNT} attempts: {e}")
                         raise
             
             try:
@@ -129,28 +130,30 @@ def scrape_author(author, db_connection):
                         print(parsed)
                         print('\n')
                         
-                        cursor = db_connection.cursor()
-                        cursor.execute("""
-                            INSERT INTO links(
-                                url, author, article, downloaded,
-                                title, book_author, date, language, genre,
-                                image_url, book_url, description,
-                                has_epub, has_pdf
-                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-                        """, (
-                            href, author, article_html, 0,
-                            parsed['title'], parsed['book_author'], parsed['date'],
-                            parsed['language'], parsed['genre'], parsed['image_url'],
-                            parsed['book_url'], parsed['description'],
-                            1 if parsed['has_epub'] else 0,
-                            1 if parsed['has_pdf'] else 0
-                        ))
-                        db_connection.commit()
+                        link = Link(
+                            url=href,
+                            author=author,
+                            article=article_html,
+                            downloaded=0,
+                            title=parsed['title'],
+                            book_author=parsed['book_author'],
+                            date=parsed['date'],
+                            language=parsed['language'],
+                            genre=parsed['genre'],
+                            image_url=parsed['image_url'],
+                            book_url=parsed['book_url'],
+                            description=parsed['description'],
+                            has_epub=1 if parsed['has_epub'] else 0,
+                            has_pdf=1 if parsed['has_pdf'] else 0
+                        )
+                        session.add(link)
+                        session.commit()
                         
                         books_added += 1
                         print(f"Added book: {parsed['title']}")
                         
-                    except sqlite3.IntegrityError:
+                    except IntegrityError:
+                        session.rollback()
                         print(f"Book already exists: {href}")
                         pass
                 

@@ -7,7 +7,8 @@
     "author": "cd api && python author_scraper.py",
     "api": "cd api && uvicorn server:app --host 0.0.0.0 --port 8000",
     "db": "sqlite3 database/links.db",
-    "dev": "npm-run-all --parallel api start"
+    "dev": "npm-run-all --parallel api start",
+    "test": "cd api && pytest -v"
   },
   "name": "advent-of-code",
   "version": "1.0.0",

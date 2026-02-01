@@ -1,55 +1,23 @@
 import os
-import sqlite3
 from typing import List, Optional
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import cloudscraper
 from urllib.parse import urljoin
+from sqlmodel import Session, select
 from scraper_utils import scrape_author, format_author_name
+from models import create_db_and_tables, engine, Link
+from constants import QueueStatus, MAX_RETRY_COUNT
 
 headers = {'Accept-Encoding': 'identity', 'User-Agent': 'Defined'}
 scraper = cloudscraper.create_scraper()
 
 # uvicorn server:app --host 0.0.0.0 --port 8000
 
-
 FRONTEND_ORIGIN = "http://localhost:5173"
-DB_PATH =  "../database/links.db"
 
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS links (
-            url TEXT UNIQUE,
-            author TEXT,
-            article TEXT,
-            downloaded INTEGER,
-            title TEXT,
-            book_author TEXT,
-            date TEXT,
-            language TEXT,
-            genre TEXT,
-            image_url TEXT,
-            book_url TEXT,
-            description TEXT,
-            has_epub INTEGER,
-            has_pdf INTEGER
-        )
-    """)
-    conn.commit()
-    conn.close()
-
-init_db()
-
-
-def get_connection() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+create_db_and_tables()
 
 
 app = FastAPI()
@@ -237,81 +205,68 @@ async def downloadFile(body: dict):
 
 @app.get("/authors")
 async def get_all_authors():
-    with get_connection() as conn:
-        cur = conn.execute("""
-            SELECT DISTINCT author, book_author 
-            FROM links 
-            WHERE author IS NOT NULL AND author != ''
-            GROUP BY author
-            ORDER BY book_author
-        """)
-        rows = cur.fetchall()
-    return {row["author"]: row["book_author"] or row["author"] for row in rows}
+    with Session(engine) as session:
+        statement = select(Link.author, Link.book_author).where(
+            Link.author.is_not(None),
+            Link.author != ''
+        ).distinct().order_by(Link.book_author)
+        results = session.exec(statement).all()
+    return {row[0]: row[1] or row[0] for row in results}
 
 
 @app.get("/links")
 async def get_links(author: Optional[str] = Query(default=None)):
-    sql = """SELECT url, author, article, downloaded, 
-             title, book_author, date, language, genre, 
-             image_url, book_url, description, has_epub, has_pdf 
-             FROM links"""
-    params = []
-    if author:
-        sql += " WHERE author = ?"
-        params.append(author)
-    with get_connection() as conn:
-        cur = conn.execute(sql, params)
-        rows = cur.fetchall()
+    with Session(engine) as session:
+        statement = select(Link)
+        if author:
+            statement = statement.where(Link.author == author)
+        links = session.exec(statement).all()
+    
     return [
         {
-            "url": row["url"],
-            "author": row["author"],
-            "article": row["article"],
-            "downloaded": bool(row["downloaded"]),
-            "title": row["title"] or "",
-            "bookAuthor": row["book_author"] or "",
-            "date": row["date"] or "",
-            "language": row["language"] or "",
-            "genre": row["genre"] or "",
-            "imageUrl": row["image_url"] or "",
-            "bookUrl": row["book_url"] or "",
-            "description": row["description"] or "",
-            "hasEpub": bool(row["has_epub"]),
-            "hasPdf": bool(row["has_pdf"]),
+            "url": link.url,
+            "author": link.author,
+            "article": link.article,
+            "downloaded": bool(link.downloaded),
+            "title": link.title or "",
+            "bookAuthor": link.book_author or "",
+            "date": link.date or "",
+            "language": link.language or "",
+            "genre": link.genre or "",
+            "imageUrl": link.image_url or "",
+            "bookUrl": link.book_url or "",
+            "description": link.description or "",
+            "hasEpub": bool(link.has_epub),
+            "hasPdf": bool(link.has_pdf),
         }
-        for row in rows
+        for link in links
     ]
 
 
 @app.delete("/authors/cleanup")
 async def cleanup_downloaded_authors():
     try:
-        with get_connection() as conn:
-            cur = conn.execute("""
-                SELECT author, book_author, COUNT(*) as total_books, 
-                       SUM(CASE WHEN downloaded = 1 THEN 1 ELSE 0 END) as downloaded_books
-                FROM links
-                WHERE author IS NOT NULL AND author != ''
-                GROUP BY author
-                HAVING total_books = downloaded_books
-            """)
-            authors_to_delete = cur.fetchall()
+        with Session(engine) as session:
+            all_links = session.exec(select(Link)).all()
+            
+            from collections import defaultdict
+            author_books = defaultdict(list)
+            for link in all_links:
+                if link.author:
+                    author_books[link.author].append(link)
             
             deleted_authors = []
             total_books_deleted = 0
             
-            for row in authors_to_delete:
-                author_slug = row["author"]
-                author_name = row["book_author"] or author_slug
-                result = conn.execute(
-                    "DELETE FROM links WHERE author = ?",
-                    (author_slug,)
-                )
-                books_deleted = result.rowcount
-                total_books_deleted += books_deleted
-                deleted_authors.append(author_name)
+            for author_slug, books in author_books.items():
+                if all(book.downloaded == 1 for book in books):
+                    author_name = books[0].book_author or author_slug
+                    for book in books:
+                        session.delete(book)
+                        total_books_deleted += 1
+                    deleted_authors.append(author_name)
             
-            conn.commit()
+            session.commit()
         
         print(f"Cleanup: Deleted {len(deleted_authors)} author(s) with {total_books_deleted} book(s)")
         return {
@@ -331,19 +286,14 @@ async def cleanup_downloaded_authors():
 async def delete_all_authors():
     """Delete all authors and books from the database."""
     try:
-        with get_connection() as conn:
-            cur = conn.execute("""
-                SELECT COUNT(DISTINCT author) as author_count, COUNT(*) as book_count
-                FROM links
-                WHERE author IS NOT NULL AND author != ''
-            """)
-            stats = cur.fetchone()
-            author_count = stats["author_count"]
-            book_count = stats["book_count"]
+        with Session(engine) as session:
+            all_links = session.exec(select(Link)).all()
+            author_count = len(set(link.author for link in all_links if link.author))
+            book_count = len(all_links)
             
-            # Delete all records
-            conn.execute("DELETE FROM links")
-            conn.commit()
+            for link in all_links:
+                session.delete(link)
+            session.commit()
         
         print(f"Deleted all {author_count} author(s) and {book_count} book(s)")
         return {
@@ -361,13 +311,14 @@ async def delete_all_authors():
 @app.delete("/authors/{author_slug}")
 async def delete_author(author_slug: str):
     try:
-        with get_connection() as conn:
-            result = conn.execute(
-                "DELETE FROM links WHERE author = ?",
-                (author_slug,)
-            )
-            deleted_count = result.rowcount
-            conn.commit()
+        with Session(engine) as session:
+            statement = select(Link).where(Link.author == author_slug)
+            links_to_delete = session.exec(statement).all()
+            deleted_count = len(links_to_delete)
+            
+            for link in links_to_delete:
+                session.delete(link)
+            session.commit()
         
         print(f"Deleted author '{author_slug}' and {deleted_count} book(s)")
         return {"success": True, "deleted_count": deleted_count}
@@ -382,13 +333,13 @@ async def delete_author(author_slug: str):
 async def scrape_author_endpoint(body: dict):
     author_input = body.get("author")
     if not author_input:
-        return {"error": "author is required"}, 400
+        raise HTTPException(status_code=400, detail="author is required")
     
     author = format_author_name(author_input)
     
     try:
-        with get_connection() as conn:
-            result = scrape_author(author, conn)
+        with Session(engine) as session:
+            result = scrape_author(author, session)
         
         if result['success']:
             return {
@@ -397,38 +348,40 @@ async def scrape_author_endpoint(body: dict):
                 "author": result['author']
             }
         else:
-            return {"error": result.get('error', 'Unknown error')}, 500
+            raise HTTPException(status_code=500, detail=result.get('error', 'Unknown error'))
             
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Error scraping author: {e}")
         import traceback
         traceback.print_exc()
-        return {"error": str(e)}, 500
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/scrape-authors")
 async def scrape_authors_endpoint(body: dict):
     authors_input = body.get("authors")
     if not authors_input:
-        return {"error": "authors is required"}, 400
+        raise HTTPException(status_code=400, detail="authors is required")
     
     author_names = [name.strip() for name in authors_input.split(",") if name.strip()]
     
     if not author_names:
-        return {"error": "No valid author names provided"}, 400
+        raise HTTPException(status_code=400, detail="No valid author names provided")
     
     results = []
     total_books = 0
     errors = []
     
     try:
-        with get_connection() as conn:
+        with Session(engine) as session:
             for author_input in author_names:
                 author = format_author_name(author_input)
                 print(f"Scraping author: {author}")
                 
                 try:
-                    result = scrape_author(author, conn)
+                    result = scrape_author(author, session)
                     
                     if result['success']:
                         total_books += result['books_added']
