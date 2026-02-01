@@ -3,6 +3,8 @@ import {
   useQueue,
   useCancelQueueItem,
   useDeleteCompletedQueue,
+  useDeleteAllQueue,
+  useDeletePendingQueue,
 } from "../hooks/useApi";
 import {
   Box,
@@ -19,6 +21,10 @@ import {
   Button,
   Tooltip,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import {
   Refresh as RefreshIcon,
@@ -28,13 +34,19 @@ import {
   Error as ErrorIcon,
   HourglassEmpty as PendingIcon,
   DownloadDone as DownloadingIcon,
+  DeleteSweep as DeleteSweepIcon,
 } from "@mui/icons-material";
 
 export const QueueView = () => {
   const { queue, loading, error, refetch } = useQueue(true);
   const { cancelItem, cancelling } = useCancelQueueItem();
-  const { deleteCompleted, deleting } = useDeleteCompletedQueue();
+  const { deleteCompleted, deleting: deletingCompleted } =
+    useDeleteCompletedQueue();
+  const { deleteAll, deleting: deletingAll } = useDeleteAllQueue();
+  const { deletePending, deleting: deletingPending } = useDeletePendingQueue();
   const [cancellingId, setCancellingId] = useState<number | null>(null);
+  const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
+  const [deletePendingDialogOpen, setDeletePendingDialogOpen] = useState(false);
 
   const handleCancel = async (queueId: number) => {
     setCancellingId(queueId);
@@ -54,6 +66,26 @@ export const QueueView = () => {
       refetch();
     } catch (err) {
       console.error("Failed to delete completed:", err);
+    }
+  };
+
+  const handleDeletePending = async () => {
+    try {
+      await deletePending();
+      setDeletePendingDialogOpen(false);
+      refetch();
+    } catch (err) {
+      console.error("Failed to delete pending:", err);
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    try {
+      await deleteAll();
+      setDeleteAllDialogOpen(false);
+      refetch();
+    } catch (err) {
+      console.error("Failed to delete all:", err);
     }
   };
 
@@ -118,14 +150,37 @@ export const QueueView = () => {
             startIcon={<DeleteIcon />}
             onClick={handleDeleteCompleted}
             disabled={
-              deleting ||
+              deletingCompleted ||
               queue.filter((q) => q.status === "completed").length === 0
             }
+            color="success"
+            variant="outlined"
+            size="small"
+          >
+            {deletingCompleted ? "Deleting..." : "Clear Completed"}
+          </Button>
+          <Button
+            startIcon={<DeleteIcon />}
+            onClick={() => setDeletePendingDialogOpen(true)}
+            disabled={
+              deletingPending ||
+              queue.filter((q) => q.status === "pending").length === 0
+            }
+            color="warning"
+            variant="outlined"
+            size="small"
+          >
+            {deletingPending ? "Deleting..." : "Clear Pending"}
+          </Button>
+          <Button
+            startIcon={<DeleteSweepIcon />}
+            onClick={() => setDeleteAllDialogOpen(true)}
+            disabled={deletingAll || queue.length === 0}
             color="error"
             variant="outlined"
             size="small"
           >
-            {deleting ? "Deleting..." : "Clear Completed"}
+            {deletingAll ? "Deleting..." : "Clear All"}
           </Button>
           <Button
             startIcon={<RefreshIcon />}
@@ -249,6 +304,56 @@ export const QueueView = () => {
           Auto-refreshing every 5 seconds • Total items: {queue.length}
         </Typography>
       </Box>
+
+      <Dialog
+        open={deletePendingDialogOpen}
+        onClose={() => setDeletePendingDialogOpen(false)}
+      >
+        <DialogTitle>Clear Pending Queue Items</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete all pending queue items? This will
+            remove all books waiting to be downloaded.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeletePendingDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeletePending}
+            variant="contained"
+            color="warning"
+            disabled={deletingPending}
+          >
+            {deletingPending ? "Deleting..." : "Clear Pending"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={deleteAllDialogOpen}
+        onClose={() => setDeleteAllDialogOpen(false)}
+      >
+        <DialogTitle>Clear All Queue Items</DialogTitle>
+        <DialogContent>
+          <Typography>
+            <strong>WARNING:</strong> This will delete ALL queue items (pending,
+            in progress, completed, and failed). This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteAllDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleDeleteAll}
+            variant="contained"
+            color="error"
+            disabled={deletingAll}
+          >
+            {deletingAll ? "Deleting..." : "Clear All"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

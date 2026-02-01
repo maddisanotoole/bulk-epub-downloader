@@ -375,4 +375,48 @@ async def cancel_queue_item(queue_id: int):
         session.commit()
         
         return {"success": True, "message": "Queue item cancelled"}
+
+
+@app.delete("/queue/completed/all")
+async def delete_completed_queue():
+    """Delete all completed queue items"""
+    with Session(engine) as session:
+        statement = select(QueueItem).where(QueueItem.status == QueueStatus.COMPLETED.value)
+        items = session.exec(statement).all()
+        count = len(items)
+        
+        for item in items:
+            session.delete(item)
+        session.commit()
+        
+        return {"success": True, "deleted_count": count, "message": f"Deleted {count} completed item(s)"}
+
+
+@app.delete("/queue/all")
+async def delete_all_queue():
+    """Delete all queue items"""
+    with Session(engine) as session:
+        items = session.exec(select(QueueItem)).all()
+        count = len(items)
+        
+        for item in items:
+            session.delete(item)
+        session.commit()
+        
+        return {"success": True, "deleted_count": count, "message": f"Deleted {count} queue item(s)"}
+
+
+@app.delete("/queue/pending/all")
+async def delete_pending_queue():
+    """Delete all pending queue items"""
+    with Session(engine) as session:
+        statement = select(QueueItem).where(QueueItem.status == QueueStatus.PENDING.value)
+        items = session.exec(statement).all()
+        count = len(items)
+        
+        for item in items:
+            session.delete(item)
+        session.commit()
+        
+        return {"success": True, "deleted_count": count, "message": f"Deleted {count} pending item(s)"}
     

@@ -312,6 +312,12 @@ export function Layout() {
                     />
                   }
                   label="Hide downloaded books"
+                  slotProps={{
+                    typography: {
+                      variant: "body2",
+                      color: "text.secondary",
+                    },
+                  }}
                 />
                 <FormControlLabel
                   control={
@@ -321,6 +327,12 @@ export function Layout() {
                     />
                   }
                   label="English only"
+                  slotProps={{
+                    typography: {
+                      variant: "body2",
+                      color: "text.secondary",
+                    },
+                  }}
                 />
               </Box>
               <Box
@@ -351,7 +363,8 @@ export function Layout() {
                 {filterByAuthor && (
                   <Box sx={{ mr: 2 }}>
                     <Typography
-                      variant="subtitle1"
+                      variant="body2"
+                      color="text.secondary"
                       component="span"
                       sx={{ mr: 2 }}
                     >

@@ -366,3 +366,57 @@ export function useDeleteCompletedQueue() {
 
   return { deleteCompleted, deleting, error } as const;
 }
+
+export function useDeleteAllQueue() {
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const deleteAll = async () => {
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/queue/all`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.detail || `Delete failed: ${res.status}`);
+      }
+      return await res.json();
+    } catch (err: any) {
+      setError(err.message ?? "Failed to delete all queue items");
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return { deleteAll, deleting, error } as const;
+}
+
+export function useDeletePendingQueue() {
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const deletePending = async () => {
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/queue/pending/all`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.detail || `Delete failed: ${res.status}`);
+      }
+      return await res.json();
+    } catch (err: any) {
+      setError(err.message ?? "Failed to delete pending items");
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return { deletePending, deleting, error } as const;
+}
