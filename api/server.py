@@ -375,4 +375,26 @@ async def cancel_queue_item(queue_id: int):
         session.commit()
         
         return {"success": True, "message": "Queue item cancelled"}
+
+
+@app.delete("/queue/completed/all")
+async def delete_completed_queue_items():
+    """Delete all completed queue items"""
+    with Session(engine) as session:
+        statement = select(QueueItem).where(
+            QueueItem.status == QueueStatus.COMPLETED.value
+        )
+        items = session.exec(statement).all()
+        
+        count = len(items)
+        for item in items:
+            session.delete(item)
+        
+        session.commit()
+        
+        return {
+            "success": True, 
+            "deleted_count": count,
+            "message": f"Deleted {count} completed queue item(s)"
+        }
     

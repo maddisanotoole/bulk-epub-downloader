@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { useQueue, useCancelQueueItem } from "../hooks/useApi";
+import {
+  useQueue,
+  useCancelQueueItem,
+  useDeleteCompletedQueue,
+} from "../hooks/useApi";
 import {
   Box,
   Paper,
@@ -19,6 +23,7 @@ import {
 import {
   Refresh as RefreshIcon,
   Cancel as CancelIcon,
+  Delete as DeleteIcon,
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon,
   HourglassEmpty as PendingIcon,
@@ -28,6 +33,7 @@ import {
 export const QueueView = () => {
   const { queue, loading, error, refetch } = useQueue(true);
   const { cancelItem, cancelling } = useCancelQueueItem();
+  const { deleteCompleted, deleting } = useDeleteCompletedQueue();
   const [cancellingId, setCancellingId] = useState<number | null>(null);
 
   const handleCancel = async (queueId: number) => {
@@ -39,6 +45,15 @@ export const QueueView = () => {
       console.error("Failed to cancel:", err);
     } finally {
       setCancellingId(null);
+    }
+  };
+
+  const handleDeleteCompleted = async () => {
+    try {
+      await deleteCompleted();
+      refetch();
+    } catch (err) {
+      console.error("Failed to delete completed:", err);
     }
   };
 
@@ -94,16 +109,33 @@ export const QueueView = () => {
 
   return (
     <Box>
-      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
+      <Box
+        sx={{ display: "flex", justifyContent: "space-between", mb: 2, mt: 4 }}
+      >
         <Typography variant="h5">Download Queue</Typography>
-        <Button
-          startIcon={<RefreshIcon />}
-          onClick={refetch}
-          disabled={loading}
-          size="small"
-        >
-          Refresh
-        </Button>
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <Button
+            startIcon={<DeleteIcon />}
+            onClick={handleDeleteCompleted}
+            disabled={
+              deleting ||
+              queue.filter((q) => q.status === "completed").length === 0
+            }
+            color="error"
+            variant="outlined"
+            size="small"
+          >
+            {deleting ? "Deleting..." : "Clear Completed"}
+          </Button>
+          <Button
+            startIcon={<RefreshIcon />}
+            onClick={refetch}
+            disabled={loading}
+            size="small"
+          >
+            Refresh
+          </Button>
+        </Box>
       </Box>
 
       {loading && queue.length === 0 ? (

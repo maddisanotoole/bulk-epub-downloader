@@ -339,3 +339,30 @@ export function useCancelQueueItem() {
 
   return { cancelItem, cancelling, error } as const;
 }
+
+export function useDeleteCompletedQueue() {
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const deleteCompleted = async () => {
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/queue/completed/all`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.detail || `Delete failed: ${res.status}`);
+      }
+      return await res.json();
+    } catch (err: any) {
+      setError(err.message ?? "Failed to delete completed items");
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return { deleteCompleted, deleting, error } as const;
+}
