@@ -29,7 +29,7 @@ The app is made up of 3 components:
 
 **API server**: Python server, for scraping and communication with the FE. When a download is requested, it adds its to a DB queue.
 
-**Worker**: Runs in the background, periodically checks the DB queue for uncompleted downloads and downloads them.
+**Worker**: Runs in the background, periodically checks the DB queue for uncompleted downloads and downloads them to your Downloads folder.
 
 
 
