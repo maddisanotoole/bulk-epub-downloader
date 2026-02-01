@@ -58,10 +58,9 @@ select author, url from links;
 ```
 
 ## Upcoming Features:
-
-[] Download folder selection
-[] Add Docker support for containerised deployment
-[] Bulk import authors from CSV/text file
-[] Include book description
-[] Schedule downloads for specific times
-[] Dark mode toggle
+ * Download folder selection
+ * Add Docker support for containerised deployment
+ * Bulk import authors from CSV/text file
+ * Include book description
+ * Schedule downloads for specific times
+ * Dark mode toggle
