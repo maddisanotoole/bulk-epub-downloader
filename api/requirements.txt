@@ -3,3 +3,7 @@ requests==2.28.1
 cloudscraper==1.2.71
 fastapi
 uvicorn
+sqlmodel
+pytest
+pytest-asyncio
+httpx

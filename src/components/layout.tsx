@@ -9,7 +9,6 @@ import {
   Typography,
   Button,
   CircularProgress,
-  TextField,
   Dialog,
   DialogActions,
   DialogContent,
@@ -19,11 +18,12 @@ import {
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import DownloadIcon from "@mui/icons-material/Download";
-import FolderIcon from "@mui/icons-material/Folder";
 import AddIcon from "@mui/icons-material/Add";
+import FormatListNumbered from "@mui/icons-material/FormatListNumbered";
 import { AuthorList } from "./authorList";
 import { BookList } from "./bookList";
 import { AddAuthor } from "./addAuthor";
+import { QueueView } from "./queueView";
 import { Notification } from "./notification";
 import {
   useDownload,
@@ -32,11 +32,15 @@ import {
   useCleanupAuthors,
   useDeleteAllAuthors,
 } from "../hooks/useApi";
+import { SearchBar } from "./searchBar";
 
 const drawerWidth = 260;
 
 export function Layout() {
   const [showAuthorDrawer, setShowAuthorDrawer] = useState(false);
+  const [currentView, setCurrentView] = useState<
+    "books" | "addAuthor" | "queue"
+  >("books");
   const [filterByAuthor, setFilterByAuthor] = useState<string | undefined>(
     undefined,
   );
@@ -47,7 +51,6 @@ export function Layout() {
   const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
   const [refreshAuthors, setRefreshAuthors] = useState(0);
-  const [showAddAuthor, setShowAddAuthor] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [bookTitles, setBookTitles] = useState<Map<string, string>>(new Map());
   const { download, downloading, progress, failures } = useDownload();
@@ -55,6 +58,10 @@ export function Layout() {
   const { cleanupAuthors, cleaning } = useCleanupAuthors();
   const { deleteAllAuthors, deleting: deletingAll } = useDeleteAllAuthors();
   const { authors } = useAuthors(refreshAuthors > 0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filteredBookCount, setFilteredBookCount] = useState(0);
+  const [allVisibleBookUrls, setAllVisibleBookUrls] = useState<string[]>([]);
+  const [allBooksSelected, setAllBooksSelected] = useState(false);
 
   const handleDownload = async () => {
     if (checked.length > 0) {
@@ -142,12 +149,22 @@ export function Layout() {
     setBookTitles(titles);
   };
 
+  const handleFilteredCountUpdate = (
+    count: number,
+    allUrls: string[],
+    allSelected: boolean,
+  ) => {
+    setFilteredBookCount(count);
+    setAllVisibleBookUrls(allUrls);
+    setAllBooksSelected(allSelected);
+  };
+
   const handleCloseNotification = () => {
     setNotificationOpen(false);
   };
 
   const drawer = (
-    <Box sx={{ width: drawerWidth, p: 2 }}>
+    <Box sx={{ width: drawerWidth, p: 2, mt: 8 }}>
       <Typography variant="h6" gutterBottom>
         Authors
       </Typography>
@@ -177,57 +194,71 @@ export function Layout() {
     </Box>
   );
 
+  const toolbar = (
+    <AppBar position="fixed" sx={{ zIndex: (t) => t.zIndex.drawer + 1 }}>
+      <Toolbar>
+        <IconButton
+          color="inherit"
+          edge="start"
+          onClick={() => {
+            setShowAuthorDrawer(!showAuthorDrawer);
+
+            if (!showAuthorDrawer) {
+              setCurrentView("books");
+            }
+          }}
+          sx={{ mr: 2 }}
+        >
+          <MenuIcon />
+        </IconButton>
+        <Typography variant="h6" noWrap sx={{ flexGrow: 1 }}>
+          Book Downloader
+        </Typography>
+        <Button
+          color="inherit"
+          startIcon={<AddIcon />}
+          onClick={() => {
+            setCurrentView(currentView === "addAuthor" ? "books" : "addAuthor");
+          }}
+          sx={{ mr: 2 }}
+        >
+          {currentView === "addAuthor" ? "View Books" : "Add Author"}
+        </Button>
+        <Button
+          color="inherit"
+          startIcon={<FormatListNumbered />}
+          onClick={() => {
+            setCurrentView(currentView === "queue" ? "books" : "queue");
+          }}
+          sx={{ mr: 2 }}
+        >
+          {currentView === "queue" ? "View Books" : "View Queue"}
+        </Button>
+
+        <Button
+          color="inherit"
+          startIcon={
+            downloading ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : (
+              <DownloadIcon />
+            )
+          }
+          onClick={handleDownload}
+          disabled={checked.length === 0 || downloading}
+        >
+          Download Selected ({checked.length})
+          {downloading &&
+            ` - ${progress.completed}/${progress.total}${progress.failed > 0 ? ` (${progress.failed} failed)` : ""}`}
+        </Button>
+      </Toolbar>
+    </AppBar>
+  );
+
   return (
     <Box sx={{ display: "flex" }}>
       <CssBaseline />
-      <AppBar position="fixed" sx={{ zIndex: (t) => t.zIndex.drawer + 1 }}>
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            edge="start"
-            onClick={() => {
-              setShowAuthorDrawer(!showAuthorDrawer);
-
-              if (!showAuthorDrawer) {
-                setShowAddAuthor(false);
-              }
-            }}
-            sx={{ mr: 2 }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap sx={{ flexGrow: 1 }}>
-            Book Downloader
-          </Typography>
-          <Button
-            color="inherit"
-            startIcon={<AddIcon />}
-            onClick={() => {
-              setShowAddAuthor(!showAddAuthor);
-            }}
-            sx={{ mr: 2 }}
-          >
-            {showAddAuthor ? "View Books" : "Add Author"}
-          </Button>
-
-          <Button
-            color="inherit"
-            startIcon={
-              downloading ? (
-                <CircularProgress size={20} color="inherit" />
-              ) : (
-                <DownloadIcon />
-              )
-            }
-            onClick={handleDownload}
-            disabled={checked.length === 0 || downloading}
-          >
-            Download Selected ({checked.length})
-            {downloading &&
-              ` - ${progress.completed}/${progress.total}${progress.failed > 0 ? ` (${progress.failed} failed)` : ""}`}
-          </Button>
-        </Toolbar>
-      </AppBar>
+      {toolbar}
       <Drawer
         variant="temporary"
         open={showAuthorDrawer}
@@ -239,69 +270,129 @@ export function Layout() {
       >
         {drawer}
       </Drawer>
-      <Box component="main" sx={{ flexGrow: 1, p: 3, mt: 8 }}>
-        {showAddAuthor ? (
+      <Box component="main" sx={{ flexGrow: 1, p: 3, mt: 5 }}>
+        {currentView === "addAuthor" ? (
           <AddAuthor onAuthorAdded={handleAuthorAdded} />
+        ) : currentView === "queue" ? (
+          <QueueView />
         ) : (
           <>
-            <Box sx={{ mb: 2, display: "flex", gap: 2, alignItems: "center" }}>
-              {filterByAuthor && (
-                <Box sx={{ mr: 2 }}>
-                  <Typography
-                    variant="subtitle1"
-                    component="span"
-                    sx={{ mr: 2 }}
-                  >
-                    Viewing: {authors[filterByAuthor] || filterByAuthor}
-                  </Typography>
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    size="small"
-                    onClick={handleDeleteAuthorClick}
-                    disabled={deleting}
-                    sx={{ mr: 2 }}
-                  >
-                    {deleting ? "Deleting..." : "Delete Author"}
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => setFilterByAuthor(undefined)}
-                  >
-                    Clear Filter
-                  </Button>
-                </Box>
-              )}
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={hideDownloaded}
-                    onChange={(e) => setHideDownloaded(e.target.checked)}
-                  />
-                }
-                label="Hide downloaded books"
-              />
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={hideNonEnglish}
-                    onChange={(e) => setHideNonEnglish(e.target.checked)}
-                  />
-                }
-                label="English only"
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                position: "fixed",
+                gap: 3,
+                alignItems: "center",
+                backgroundColor: "white",
+                zIndex: 8,
+                width: "100%",
+                pt: 2,
+              }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "row",
+                  gap: 2,
+                  alignItems: "center",
+                  width: "100%",
+                }}
+              >
+                <SearchBar
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                ></SearchBar>
+
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={hideDownloaded}
+                      onChange={(e) => setHideDownloaded(e.target.checked)}
+                    />
+                  }
+                  label="Hide downloaded books"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={hideNonEnglish}
+                      onChange={(e) => setHideNonEnglish(e.target.checked)}
+                    />
+                  }
+                  label="English only"
+                />
+              </Box>
+              <Box
+                sx={{
+                  mb: 2,
+                  display: "flex",
+                  gap: 2,
+                  alignItems: "center",
+                  flexDirection: "row",
+                  width: "100%",
+                }}
+              >
+                <Button
+                  variant="outlined"
+                  onClick={() =>
+                    allBooksSelected
+                      ? handleUnselectAll()
+                      : handleSelectAll(allVisibleBookUrls)
+                  }
+                  size="small"
+                >
+                  {allBooksSelected ? "Unselect All" : "Select All"}
+                </Button>
+                <Typography variant="body2" color="text.secondary">
+                  Showing {filteredBookCount} book
+                  {filteredBookCount !== 1 ? "s" : ""}
+                </Typography>{" "}
+                {filterByAuthor && (
+                  <Box sx={{ mr: 2 }}>
+                    <Typography
+                      variant="subtitle1"
+                      component="span"
+                      sx={{ mr: 2 }}
+                    >
+                      Viewing: {authors[filterByAuthor] || filterByAuthor}
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      onClick={handleDeleteAuthorClick}
+                      disabled={deleting}
+                      sx={{ mr: 2 }}
+                    >
+                      {deleting ? "Deleting..." : "Delete Author"}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => setFilterByAuthor(undefined)}
+                    >
+                      Clear Filter
+                    </Button>
+                  </Box>
+                )}
+              </Box>
+            </Box>
+
+            <Box marginTop={"140px"} zIndex={-10}>
+              <BookList
+                filterByAuthor={filterByAuthor}
+                checked={checked}
+                setChecked={setChecked}
+                hideDownloaded={hideDownloaded}
+                hideNonEnglish={hideNonEnglish}
+                onSelectAll={handleSelectAll}
+                onUnselectAll={handleUnselectAll}
+                onBookTitlesUpdate={handleBookTitlesUpdate}
+                searchQuery={searchQuery}
+                onFilteredCountUpdate={handleFilteredCountUpdate}
               />
             </Box>
-            <BookList
-              filterByAuthor={filterByAuthor}
-              checked={checked}
-              setChecked={setChecked}
-              hideDownloaded={hideDownloaded}
-              hideNonEnglish={hideNonEnglish}
-              onSelectAll={handleSelectAll}
-              onUnselectAll={handleUnselectAll}
-              onBookTitlesUpdate={handleBookTitlesUpdate}
-            />
           </>
         )}
       </Box>

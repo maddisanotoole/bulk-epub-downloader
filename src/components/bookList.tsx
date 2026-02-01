@@ -3,7 +3,6 @@ import { useLinks } from "../hooks/useApi";
 import {
   Avatar,
   Box,
-  Button,
   Checkbox,
   List,
   ListItemAvatar,
@@ -22,6 +21,12 @@ type BookListProps = {
   onSelectAll: (allBookUrls: string[]) => void;
   onUnselectAll: () => void;
   onBookTitlesUpdate: (titles: Map<string, string>) => void;
+  searchQuery: string;
+  onFilteredCountUpdate: (
+    count: number,
+    allUrls: string[],
+    allSelected: boolean,
+  ) => void;
 };
 
 export const BookList = ({
@@ -33,6 +38,8 @@ export const BookList = ({
   onSelectAll,
   onUnselectAll,
   onBookTitlesUpdate,
+  searchQuery,
+  onFilteredCountUpdate,
 }: BookListProps) => {
   const { links, loading, error } = useLinks(filterByAuthor);
 
@@ -49,8 +56,20 @@ export const BookList = ({
       );
     }
 
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (link) =>
+          link.title?.toLowerCase().includes(query) ||
+          link.bookAuthor?.toLowerCase().includes(query) ||
+          link.author?.toLowerCase().includes(query) ||
+          link.genre?.toLowerCase().includes(query) ||
+          link.description?.toLowerCase().includes(query),
+      );
+    }
+
     return filtered;
-  }, [links, hideDownloaded, hideNonEnglish]);
+  }, [links, hideDownloaded, hideNonEnglish, searchQuery]);
 
   // Update book titles map whenever links change
   useEffect(() => {
@@ -60,6 +79,15 @@ export const BookList = ({
     });
     onBookTitlesUpdate(titlesMap);
   }, [links, onBookTitlesUpdate]);
+
+  // Update parent with filtered count and selection state
+  useEffect(() => {
+    const allBookUrls = filteredLinks.map((l) => l.bookUrl);
+    const allSelected =
+      allBookUrls.length > 0 &&
+      allBookUrls.every((url) => checked.includes(url));
+    onFilteredCountUpdate(filteredLinks.length, allBookUrls, allSelected);
+  }, [filteredLinks, checked, onFilteredCountUpdate]);
 
   const handleToggle = (value: string) => () => {
     const currentIndex = checked.indexOf(value);
@@ -79,33 +107,8 @@ export const BookList = ({
 
   if (!filteredLinks.length) return <p>No books</p>;
 
-  const allBookUrls = filteredLinks.map((l) => l.bookUrl);
-  const allSelected =
-    allBookUrls.length > 0 && allBookUrls.every((url) => checked.includes(url));
-
   return (
     <>
-      <Box sx={{ mb: 2, display: "flex", gap: 2 }}>
-        <Button
-          variant="outlined"
-          onClick={() =>
-            allSelected ? onUnselectAll() : onSelectAll(allBookUrls)
-          }
-          size="small"
-        >
-          {allSelected ? "Unselect All" : "Select All"}
-        </Button>
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            color: "text.secondary",
-          }}
-        >
-          Showing {filteredLinks.length} book
-          {filteredLinks.length !== 1 ? "s" : ""}
-        </Box>
-      </Box>
       <List dense>
         {filteredLinks.map((l) => (
           <ListItemButton key={l.url} onClick={handleToggle(l.bookUrl)}>

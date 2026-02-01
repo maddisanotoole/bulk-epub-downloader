@@ -4,10 +4,12 @@
     "build": "vite build",
     "preview": "vite preview",
     "postinstall": "cd api && python -m pip install -r requirements.txt",
-    "author": "cd api && python author_scraper.py",
+    "author": "cd api && python scraper_cli.py",
     "api": "cd api && uvicorn server:app --host 0.0.0.0 --port 8000",
+    "worker": "cd api  && python worker.py",
     "db": "sqlite3 database/links.db",
-    "dev": "npm-run-all --parallel api start"
+    "dev": "npm-run-all --parallel api start worker",
+    "test": "cd api && pytest -v"
   },
   "name": "advent-of-code",
   "version": "1.0.0",

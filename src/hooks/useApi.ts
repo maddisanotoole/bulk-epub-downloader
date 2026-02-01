@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Authors, Link } from "../types";
+import { Authors, Link, QueueItem } from "../types";
 
 const API_BASE = "http://localhost:8000";
 
@@ -280,4 +280,89 @@ export function useDeleteAllAuthors() {
   };
 
   return { deleteAllAuthors, deleting, error } as const;
+}
+
+export function useQueue(autoRefresh = false) {
+  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchQueue = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/queue`);
+      if (!res.ok) throw new Error(`Failed to fetch queue: ${res.status}`);
+      const data = await res.json();
+      setQueue(data);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message ?? "Failed to fetch queue");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchQueue();
+
+    if (autoRefresh) {
+      const interval = setInterval(fetchQueue, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [autoRefresh]);
+
+  return { queue, loading, error, refetch: fetchQueue } as const;
+}
+
+export function useCancelQueueItem() {
+  const [cancelling, setCancelling] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const cancelItem = async (queueId: number) => {
+    setCancelling(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/queue/${queueId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.detail || `Cancel failed: ${res.status}`);
+      }
+      return await res.json();
+    } catch (err: any) {
+      setError(err.message ?? "Failed to cancel queue item");
+      throw err;
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  return { cancelItem, cancelling, error } as const;
+}
+
+export function useDeleteCompletedQueue() {
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const deleteCompleted = async () => {
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/queue/completed/all`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.detail || `Delete failed: ${res.status}`);
+      }
+      return await res.json();
+    } catch (err: any) {
+      setError(err.message ?? "Failed to delete completed items");
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return { deleteCompleted, deleting, error } as const;
 }
