@@ -160,7 +160,7 @@ export function Layout() {
   };
 
   const drawer = (
-    <Box sx={{ width: drawerWidth, p: 2 }}>
+    <Box sx={{ width: drawerWidth, p: 2, mt: 8 }}>
       <Typography variant="h6" gutterBottom>
         Authors
       </Typography>
@@ -358,7 +358,7 @@ export function Layout() {
               </Box>
             </Box>
 
-            <Box marginTop={"80px"} zIndex={-33}>
+            <Box marginTop={"140px"} zIndex={-10}>
               <BookList
                 filterByAuthor={filterByAuthor}
                 checked={checked}

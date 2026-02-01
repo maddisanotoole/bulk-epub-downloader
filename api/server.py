@@ -8,7 +8,8 @@ from urllib.parse import urljoin
 from sqlmodel import Session, select
 from utils.scraper_utils import scrape_author, format_author_name
 from utils.download_utils import download_book
-from models import create_db_and_tables, engine, Link
+from models import create_db_and_tables, engine, Link, QueueItem
+from constants import QueueStatus
 
 headers = {'Accept-Encoding': 'identity', 'User-Agent': 'Defined'}
 scraper = cloudscraper.create_scraper()
@@ -37,36 +38,48 @@ def get_filename(url):
 async def downloadFile(body: dict):
     book_url = body.get("bookUrl")
     book_title = body.get("bookTitle", "Unknown Book") 
-    custom_destination = body.get("destination")
+    book_author = body.get("bookAuthor")
     
     if not book_url:
         raise HTTPException(status_code=400, detail="bookUrl is required")
     
     try:
-        # Download the book
-        result = download_book(book_url, book_title, custom_destination)
-        
-        # Mark as downloaded in database
         with Session(engine) as session:
-            statement = select(Link).where(Link.book_url == book_url)
-            link = session.exec(statement).first()
-            if link:
-                link.downloaded = 1
-                session.add(link)
-                session.commit()
-        print(f"Marked {book_url} as downloaded in database")
+            # Check if already in queue
+            existing = session.exec(
+                select(QueueItem).where(
+                    QueueItem.book_url == book_url,
+                    QueueItem.status.in_([QueueStatus.PENDING.value, QueueStatus.IN_PROGRESS.value])
+                )
+            ).first()
+            
+            if existing:
+                return {
+                    "success": True,
+                    "queued": True,
+                    "queue_id": existing.id,
+                    "message": "Book already in queue"
+                }
+            
+            queue_item = QueueItem(
+                book_title=book_title,
+                book_url=book_url,
+                book_author=book_author,
+                status=QueueStatus.PENDING.value
+            )
+            session.add(queue_item)
+            session.commit()
+            session.refresh(queue_item)
+            
+            return {
+                "success": True,
+                "queued": True,
+                "queue_id": queue_item.id,
+                "message": "Book added to download queue"
+            }
         
-        return {
-            "success": True, 
-            "filename": result["filename"], 
-            "destination": result["destination"]
-        }
-        
-    except ValueError as e:
-        # Known errors (form not found, etc.)
-        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        print(f"Error downloading: {e}")
+        print(f"Error adding to queue: {e}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
@@ -293,4 +306,73 @@ async def scrape_authors_endpoint(body: dict):
         import traceback
         traceback.print_exc()
         return {"error": str(e)}, 500
+
+
+@app.get("/queue")
+async def get_queue(status: Optional[str] = Query(default=None)):
+    """Get all queue items, optionally filtered by status"""
+    with Session(engine) as session:
+        statement = select(QueueItem)
+        if status:
+            statement = statement.where(QueueItem.status == status)
+        statement = statement.order_by(QueueItem.created_at)
+        items = session.exec(statement).all()
+    
+    return [
+        {
+            "id": item.id,
+            "bookTitle": item.book_title,
+            "bookUrl": item.book_url,
+            "bookAuthor": item.book_author,
+            "status": item.status,
+            "retryCount": item.retry_count,
+            "errorMessage": item.error_message,
+            "createdAt": item.created_at,
+            "startedAt": item.started_at,
+            "completedAt": item.completed_at,
+        }
+        for item in items
+    ]
+
+
+@app.get("/queue/{queue_id}")
+async def get_queue_item(queue_id: int):
+    """Get a specific queue item by ID"""
+    with Session(engine) as session:
+        item = session.get(QueueItem, queue_id)
+        if not item:
+            raise HTTPException(status_code=404, detail="Queue item not found")
+        
+        return {
+            "id": item.id,
+            "bookTitle": item.book_title,
+            "bookUrl": item.book_url,
+            "bookAuthor": item.book_author,
+            "status": item.status,
+            "retryCount": item.retry_count,
+            "errorMessage": item.error_message,
+            "createdAt": item.created_at,
+            "startedAt": item.started_at,
+            "completedAt": item.completed_at,
+        }
+
+
+@app.delete("/queue/{queue_id}")
+async def cancel_queue_item(queue_id: int):
+    """Cancel a queued download (only if still pending)"""
+    with Session(engine) as session:
+        item = session.get(QueueItem, queue_id)
+        if not item:
+            raise HTTPException(status_code=404, detail="Queue item not found")
+        
+        if item.status != QueueStatus.PENDING.value:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Cannot cancel item with status: {item.status}"
+            )
+        
+        session.delete(item)
+        session.commit()
+        
+        return {"success": True, "message": "Queue item cancelled"}
     

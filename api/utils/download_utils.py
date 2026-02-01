@@ -4,12 +4,12 @@ from os.path import join, expanduser
 from os import makedirs
 from bs4 import BeautifulSoup
 from typing import Optional
-
 headers = {'Accept-Encoding': 'identity', 'User-Agent': 'Defined'}
 scraper = cloudscraper.create_scraper()
 
 MAX_RETRIES = 3
 RETRY_DELAY = 2
+
 
 
 def download_book(book_url: str, book_title: str = "Unknown Book", custom_destination: Optional[str] = None):
