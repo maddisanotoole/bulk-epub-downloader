@@ -315,7 +315,7 @@ async def get_queue(status: Optional[str] = Query(default=None)):
         statement = select(QueueItem)
         if status:
             statement = statement.where(QueueItem.status == status)
-        statement = statement.order_by(QueueItem.created_at)
+        statement = statement.order_by(QueueItem.created_at.desc())
         items = session.exec(statement).all()
     
     return [
@@ -375,26 +375,4 @@ async def cancel_queue_item(queue_id: int):
         session.commit()
         
         return {"success": True, "message": "Queue item cancelled"}
-
-
-@app.delete("/queue/completed/all")
-async def delete_completed_queue_items():
-    """Delete all completed queue items"""
-    with Session(engine) as session:
-        statement = select(QueueItem).where(
-            QueueItem.status == QueueStatus.COMPLETED.value
-        )
-        items = session.exec(statement).all()
-        
-        count = len(items)
-        for item in items:
-            session.delete(item)
-        
-        session.commit()
-        
-        return {
-            "success": True, 
-            "deleted_count": count,
-            "message": f"Deleted {count} completed queue item(s)"
-        }
     
