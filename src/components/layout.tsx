@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   CssBaseline,
@@ -41,8 +41,19 @@ export function Layout() {
   const [currentView, setCurrentView] = useState<
     "books" | "addAuthor" | "queue"
   >("books");
+
+  const getInitialAuthorFilter = () => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("author") || undefined;
+  };
+
+  const getInitialSearchQuery = () => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("search") || "";
+  };
+
   const [filterByAuthor, setFilterByAuthor] = useState<string | undefined>(
-    undefined,
+    getInitialAuthorFilter(),
   );
   const [checked, setChecked] = useState<string[]>([]);
   const [hideDownloaded, setHideDownloaded] = useState(true);
@@ -58,10 +69,32 @@ export function Layout() {
   const { cleanupAuthors, cleaning } = useCleanupAuthors();
   const { deleteAllAuthors, deleting: deletingAll } = useDeleteAllAuthors();
   const { authors } = useAuthors(refreshAuthors > 0);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(getInitialSearchQuery());
   const [filteredBookCount, setFilteredBookCount] = useState(0);
   const [allVisibleBookUrls, setAllVisibleBookUrls] = useState<string[]>([]);
   const [allBooksSelected, setAllBooksSelected] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+
+    if (searchQuery) {
+      params.set("search", searchQuery);
+    } else {
+      params.delete("search");
+    }
+
+    if (filterByAuthor) {
+      params.set("author", filterByAuthor);
+    } else {
+      params.delete("author");
+    }
+
+    const newUrl = params.toString()
+      ? `${window.location.pathname}?${params.toString()}`
+      : window.location.pathname;
+
+    window.history.replaceState({}, "", newUrl);
+  }, [searchQuery, filterByAuthor]);
 
   const handleDownload = async () => {
     if (checked.length > 0) {

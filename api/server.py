@@ -36,46 +36,77 @@ def get_filename(url):
 
 @app.post("/download")
 async def downloadFile(body: dict):
-    book_url = body.get("bookUrl")
-    book_title = body.get("bookTitle", "Unknown Book") 
-    book_author = body.get("bookAuthor")
-    
-    if not book_url:
-        raise HTTPException(status_code=400, detail="bookUrl is required")
+    books = body.get("books")
+    if not isinstance(books, list) or len(books) == 0:
+        raise HTTPException(status_code=400, detail="books must be a non-empty array")
     
     try:
         with Session(engine) as session:
-            # Check if already in queue
-            existing = session.exec(
-                select(QueueItem).where(
-                    QueueItem.book_url == book_url,
-                    QueueItem.status.in_([QueueStatus.PENDING.value, QueueStatus.IN_PROGRESS.value])
+            results = []
+            added = 0
+            skipped = 0
+            
+            for book in books:
+                book_url = book.get("bookUrl")
+                book_title = book.get("bookTitle", "Unknown Book")
+                book_author = book.get("bookAuthor")
+                
+                if not book_url:
+                    results.append({
+                        "bookUrl": book_url,
+                        "bookTitle": book_title,
+                        "success": False,
+                        "error": "bookUrl is required"
+                    })
+                    continue
+                
+                # Check if already in queue
+                existing = session.exec(
+                    select(QueueItem).where(
+                        QueueItem.book_url == book_url,
+                        QueueItem.status.in_([QueueStatus.PENDING.value, QueueStatus.IN_PROGRESS.value])
+                    )
+                ).first()
+                
+                if existing:
+                    results.append({
+                        "bookUrl": book_url,
+                        "bookTitle": book_title,
+                        "success": True,
+                        "skipped": True,
+                        "queue_id": existing.id,
+                        "message": "Book already in queue"
+                    })
+                    skipped += 1
+                    continue
+                
+                queue_item = QueueItem(
+                    book_title=book_title,
+                    book_url=book_url,
+                    book_author=book_author,
+                    status=QueueStatus.PENDING.value
                 )
-            ).first()
-            
-            if existing:
-                return {
+                session.add(queue_item)
+                session.flush()
+                session.refresh(queue_item)
+                
+                results.append({
+                    "bookUrl": book_url,
+                    "bookTitle": book_title,
                     "success": True,
-                    "queued": True,
-                    "queue_id": existing.id,
-                    "message": "Book already in queue"
-                }
+                    "queue_id": queue_item.id,
+                    "message": "Book added to download queue"
+                })
+                added += 1
             
-            queue_item = QueueItem(
-                book_title=book_title,
-                book_url=book_url,
-                book_author=book_author,
-                status=QueueStatus.PENDING.value
-            )
-            session.add(queue_item)
             session.commit()
-            session.refresh(queue_item)
             
             return {
                 "success": True,
-                "queued": True,
-                "queue_id": queue_item.id,
-                "message": "Book added to download queue"
+                "total": len(books),
+                "added": added,
+                "skipped": skipped,
+                "results": results
             }
         
     except Exception as e:

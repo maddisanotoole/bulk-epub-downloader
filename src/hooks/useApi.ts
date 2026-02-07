@@ -31,59 +31,75 @@ export function useDownload() {
     setFailures([]);
     setProgress({ completed: 0, total: bookUrls.length, failed: 0 });
 
-    let completed = 0;
-    let failed = 0;
     const failedDownloads: DownloadFailure[] = [];
 
-    for (const bookUrl of bookUrls) {
-      try {
-        const bookTitle = bookTitles.get(bookUrl) || "Unknown Book";
-        const body: any = { bookUrl, bookTitle };
-        if (destination) {
-          body.destination = destination;
+    try {
+      const books = bookUrls.map((bookUrl) => ({
+        bookUrl,
+        bookTitle: bookTitles.get(bookUrl) || "Unknown Book",
+        bookAuthor: undefined,
+      }));
+
+      const body: any = { books };
+      if (destination) {
+        body.destination = destination;
+      }
+
+      const res = await fetch(`${API_BASE}/download`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(
+          data.detail || `Request failed with status: ${res.status}`,
+        );
+      }
+
+      let completed = 0;
+      let failed = 0;
+
+      if (data.results) {
+        for (const result of data.results) {
+          if (result.success && !result.error) {
+            completed++;
+          } else {
+            failed++;
+            failedDownloads.push({
+              bookUrl: result.bookUrl,
+              bookTitle: result.bookTitle,
+              error: result.error || result.message || "Unknown error",
+            });
+          }
         }
+      }
 
-        const res = await fetch(`${API_BASE}/download`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
+      setProgress({ completed, total: bookUrls.length, failed });
+      setFailures(failedDownloads);
 
-        const data = await res.json();
-
-        if (!res.ok || data.error) {
-          const errorMsg =
-            data.error || `Download failed with status: ${res.status}`;
-          failedDownloads.push({
-            bookUrl: data.bookUrl || bookUrl,
-            bookTitle: data.bookTitle || bookTitle,
-            error: errorMsg,
-          });
-          failed++;
-        } else {
-          completed++;
-        }
-
-        setProgress({ completed, total: bookUrls.length, failed });
-        setFailures([...failedDownloads]);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      } catch (err: any) {
-        const bookTitle = bookTitles.get(bookUrl) || "Unknown Book";
+      if (failedDownloads.length > 0) {
+        setError(`${failedDownloads.length} download(s) failed`);
+      }
+    } catch (err: any) {
+      setError(err.message ?? "Network error");
+      for (const bookUrl of bookUrls) {
         failedDownloads.push({
           bookUrl,
-          bookTitle,
+          bookTitle: bookTitles.get(bookUrl) || "Unknown Book",
           error: err.message ?? "Network error",
         });
-        failed++;
-        setProgress({ completed, total: bookUrls.length, failed });
-        setFailures([...failedDownloads]);
       }
-    }
-
-    setDownloading(false);
-
-    if (failedDownloads.length > 0) {
-      setError(`${failedDownloads.length} download(s) failed`);
+      setFailures(failedDownloads);
+      setProgress({
+        completed: 0,
+        total: bookUrls.length,
+        failed: bookUrls.length,
+      });
+    } finally {
+      setDownloading(false);
     }
   };
 

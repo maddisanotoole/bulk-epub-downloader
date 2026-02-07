@@ -1,8 +1,7 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useLinks } from "../hooks/useApi";
 import {
   Avatar,
-  Box,
   Checkbox,
   List,
   ListItemAvatar,
@@ -11,6 +10,7 @@ import {
   ListItemText,
 } from "@mui/material";
 import { Image as ImageIcon } from "@mui/icons-material";
+import { CopyableText } from "./copyableText";
 
 type BookListProps = {
   filterByAuthor?: string;
@@ -128,12 +128,18 @@ export const BookList = ({
                 <ImageIcon></ImageIcon>
               </Avatar>
             </ListItemAvatar>
-            <ListItemText style={{ paddingLeft: "25px", width: "25%" }}>
+            <CopyableText
+              text={l.title || ""}
+              style={{ paddingLeft: "25px", width: "25%" }}
+            >
               {l.title}
-            </ListItemText>
-            <ListItemText style={{ paddingLeft: "5px", width: "10%" }}>
+            </CopyableText>
+            <CopyableText
+              text={l.bookAuthor ?? l.author ?? ""}
+              style={{ paddingLeft: "5px", width: "10%" }}
+            >
               {l.bookAuthor ?? l.author}
-            </ListItemText>
+            </CopyableText>
 
             <ListItemText style={{ paddingLeft: "5px", width: "10%" }}>
               {l.date}
