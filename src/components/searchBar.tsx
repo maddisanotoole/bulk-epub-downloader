@@ -13,7 +13,7 @@ export const SearchBar = ({ searchQuery, setSearchQuery }: SearchBarProps) => {
       placeholder="Search books by title, author, genre, or description..."
       value={searchQuery}
       onChange={(e) => setSearchQuery(e.target.value)}
-      style={{ width: "70%" }}
+      style={{ width: "60%" }}
       slotProps={{
         input: {
           startAdornment: (

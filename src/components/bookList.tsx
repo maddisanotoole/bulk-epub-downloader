@@ -17,7 +17,7 @@ type BookListProps = {
   checked: string[];
   setChecked: (checked: string[]) => void;
   hideDownloaded: boolean;
-  hideNonEnglish: boolean;
+  selectedLanguage: string;
   onSelectAll: (allBookUrls: string[]) => void;
   onUnselectAll: () => void;
   onBookTitlesUpdate: (titles: Map<string, string>) => void;
@@ -27,6 +27,7 @@ type BookListProps = {
     allUrls: string[],
     allSelected: boolean,
   ) => void;
+  onAvailableLanguagesUpdate: (languages: string[]) => void;
 };
 
 export const BookList = ({
@@ -34,12 +35,13 @@ export const BookList = ({
   checked,
   setChecked,
   hideDownloaded,
-  hideNonEnglish,
+  selectedLanguage,
   onSelectAll,
   onUnselectAll,
   onBookTitlesUpdate,
   searchQuery,
   onFilteredCountUpdate,
+  onAvailableLanguagesUpdate,
 }: BookListProps) => {
   const { links, loading, error } = useLinks(filterByAuthor);
 
@@ -50,9 +52,11 @@ export const BookList = ({
       filtered = filtered.filter((link) => !link.downloaded);
     }
 
-    if (hideNonEnglish) {
+    if (selectedLanguage !== "All") {
       filtered = filtered.filter(
-        (link) => !link.language || link.language.toLowerCase() === "english",
+        (link) =>
+          link.language &&
+          link.language.toLowerCase() === selectedLanguage.toLowerCase(),
       );
     }
 
@@ -69,7 +73,7 @@ export const BookList = ({
     }
 
     return filtered;
-  }, [links, hideDownloaded, hideNonEnglish, searchQuery]);
+  }, [links, hideDownloaded, selectedLanguage, searchQuery]);
 
   // Update book titles map whenever links change
   useEffect(() => {
@@ -80,7 +84,17 @@ export const BookList = ({
     onBookTitlesUpdate(titlesMap);
   }, [links, onBookTitlesUpdate]);
 
-  // Update parent with filtered count and selection state
+  useEffect(() => {
+    const languagesSet = new Set<string>();
+    links.forEach((link) => {
+      if (link.language && link.language.trim()) {
+        languagesSet.add(link.language);
+      }
+    });
+    const uniqueLanguages = Array.from(languagesSet).sort();
+    onAvailableLanguagesUpdate(uniqueLanguages);
+  }, [links, onAvailableLanguagesUpdate]);
+
   useEffect(() => {
     const allBookUrls = filteredLinks.map((l) => l.bookUrl);
     const allSelected =

@@ -15,6 +15,10 @@ import {
   DialogTitle,
   FormControlLabel,
   Checkbox,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import DownloadIcon from "@mui/icons-material/Download";
@@ -57,7 +61,8 @@ export function Layout() {
   );
   const [checked, setChecked] = useState<string[]>([]);
   const [hideDownloaded, setHideDownloaded] = useState(true);
-  const [hideNonEnglish, setHideNonEnglish] = useState(true);
+  const [selectedLanguage, setSelectedLanguage] = useState("English");
+  const [availableLanguages, setAvailableLanguages] = useState<string[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
@@ -191,6 +196,20 @@ export function Layout() {
     setAllVisibleBookUrls(allUrls);
     setAllBooksSelected(allSelected);
   };
+
+  const handleAvailableLanguagesUpdate = (languages: string[]) => {
+    setAvailableLanguages(languages);
+  };
+
+  useEffect(() => {
+    if (
+      availableLanguages.length > 0 &&
+      selectedLanguage !== "All" &&
+      !availableLanguages.includes(selectedLanguage)
+    ) {
+      setSelectedLanguage("All");
+    }
+  }, [availableLanguages, selectedLanguage]);
 
   const handleCloseNotification = () => {
     setNotificationOpen(false);
@@ -336,7 +355,22 @@ export function Layout() {
                   searchQuery={searchQuery}
                   setSearchQuery={setSearchQuery}
                 ></SearchBar>
-
+                <FormControl size="small" sx={{ minWidth: 150 }}>
+                  <InputLabel id="language-select-label">Language</InputLabel>
+                  <Select
+                    labelId="language-select-label"
+                    value={selectedLanguage}
+                    label="Language"
+                    onChange={(e) => setSelectedLanguage(e.target.value)}
+                  >
+                    <MenuItem value="All">All Languages</MenuItem>
+                    {availableLanguages.map((lang) => (
+                      <MenuItem key={lang} value={lang}>
+                        {lang}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
                 <FormControlLabel
                   control={
                     <Checkbox
@@ -345,21 +379,6 @@ export function Layout() {
                     />
                   }
                   label="Hide downloaded books"
-                  slotProps={{
-                    typography: {
-                      variant: "body2",
-                      color: "text.secondary",
-                    },
-                  }}
-                />
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={hideNonEnglish}
-                      onChange={(e) => setHideNonEnglish(e.target.checked)}
-                    />
-                  }
-                  label="English only"
                   slotProps={{
                     typography: {
                       variant: "body2",
@@ -431,12 +450,13 @@ export function Layout() {
                 checked={checked}
                 setChecked={setChecked}
                 hideDownloaded={hideDownloaded}
-                hideNonEnglish={hideNonEnglish}
+                selectedLanguage={selectedLanguage}
                 onSelectAll={handleSelectAll}
                 onUnselectAll={handleUnselectAll}
                 onBookTitlesUpdate={handleBookTitlesUpdate}
                 searchQuery={searchQuery}
                 onFilteredCountUpdate={handleFilteredCountUpdate}
+                onAvailableLanguagesUpdate={handleAvailableLanguagesUpdate}
               />
             </Box>
           </>
