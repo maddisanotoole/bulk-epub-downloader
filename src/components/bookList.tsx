@@ -55,7 +55,7 @@ export const BookList = ({
     if (selectedLanguage !== "All") {
       filtered = filtered.filter(
         (link) =>
-          link.language &&
+          !link.language ||
           link.language.toLowerCase() === selectedLanguage.toLowerCase(),
       );
     }

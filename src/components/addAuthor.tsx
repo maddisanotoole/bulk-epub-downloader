@@ -7,6 +7,8 @@ import {
   Paper,
   CircularProgress,
   Alert,
+  FormControlLabel,
+  Switch,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import { useAddAuthor } from "../hooks/useApi";
@@ -17,13 +19,41 @@ interface AddAuthorProps {
 
 export function AddAuthor({ onAuthorAdded }: AddAuthorProps) {
   const [authorName, setAuthorName] = useState("");
+  const [reverseNames, setReverseNames] = useState(false);
   const { addAuthor, adding, error, success } = useAddAuthor();
+
+  const reverseAuthorName = (name: string): string => {
+    const words = name.trim().split(/\s+/);
+    if (words.length < 2) return name;
+    const lastName = words.pop()!;
+    return `${lastName} ${words.join(" ")}`;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!authorName.trim()) return;
 
-    const result = await addAuthor(authorName);
+    let finalAuthorNames = authorName;
+
+    if (reverseNames) {
+      const authors = authorName
+        .split(",")
+        .map((a) => a.trim())
+        .filter(Boolean);
+      const allNames: string[] = [];
+
+      for (const author of authors) {
+        allNames.push(author);
+        const reversed = reverseAuthorName(author);
+        if (reversed !== author) {
+          allNames.push(reversed);
+        }
+      }
+
+      finalAuthorNames = allNames.join(", ");
+    }
+
+    const result = await addAuthor(finalAuthorNames);
     if (result?.success) {
       setAuthorName("");
       onAuthorAdded();
@@ -48,6 +78,17 @@ export function AddAuthor({ onAuthorAdded }: AddAuthorProps) {
           value={authorName}
           onChange={(e) => setAuthorName(e.target.value)}
           disabled={adding}
+          sx={{ mb: 2 }}
+        />
+        <FormControlLabel
+          control={
+            <Switch
+              checked={reverseNames}
+              onChange={(e) => setReverseNames(e.target.checked)}
+              disabled={adding}
+            />
+          }
+          label="Try reverse name (LASTNAME FIRSTNAME)"
           sx={{ mb: 2 }}
         />
         {error && (

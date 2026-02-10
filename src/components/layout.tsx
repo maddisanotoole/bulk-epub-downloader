@@ -274,7 +274,7 @@ export function Layout() {
           }}
           sx={{ mr: 2 }}
         >
-          {currentView === "addAuthor" ? "View Books" : "Add Author"}
+          {currentView === "addAuthor" ? "View Books" : "Add Author/s"}
         </Button>
         <Button
           color="inherit"
